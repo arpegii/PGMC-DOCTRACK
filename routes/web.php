@@ -11,7 +11,7 @@ use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\TrackController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\ReportController; // ← ADD THIS
+use App\Http\Controllers\ReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,7 +24,7 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
-// Dashboard → Incoming
+// Dashboard redirect to incoming
 Route::get('/dashboard', function () {
     return redirect()->route('incoming.index');
 })->middleware(['auth', 'verified'])->name('dashboard');
@@ -105,3 +105,4 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 require __DIR__.'/auth.php';
+

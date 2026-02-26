@@ -4,7 +4,7 @@
 <div class="page-hero">
     <div>
         <h1 class="page-title">Track Document</h1>
-        <p class="page-subtitle">Search and track documents by number or title</p>
+        <p class="page-subtitle">Search and track documents using the full document number</p>
     </div>
 </div>
 @endsection
@@ -223,7 +223,7 @@
                         type="text" 
                         name="search" 
                         value="{{ $searchQuery ?? '' }}"
-                        placeholder="Search here..."
+                        placeholder="e.g. BGCU-2026-005"
                         class="w-full rounded-xl border border-slate-300 px-4 py-3
                                focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
                                outline-none text-sm transition duration-200
@@ -462,6 +462,9 @@
 
                 </div>
                 @endforeach
+
+                <div class="mt-4 rounded-xl border border-slate-200 overflow-hidden">
+                </div>
             @else
                 <!-- No Results -->
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">

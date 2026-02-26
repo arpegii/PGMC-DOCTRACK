@@ -29,8 +29,9 @@
 @if(auth()->user()->isAdmin())
     <div class="pb-2">
         <form method="GET" action="{{ route('incoming.index') }}" class="filter-card">
+            <input type="hidden" name="search" value="{{ request('search') }}">
             <div class="flex flex-col md:flex-row md:items-center gap-3">
-                <div class="md:flex-1">
+                <div class="min-w-0 md:flex-1">
                     <select name="unit_id" class="form-select-modern">
                         <option value="">All units</option>
                         @foreach($filterUnits as $unit)
@@ -44,7 +45,7 @@
                     <button type="submit" class="btn-primary-modern">
                         Apply
                     </button>
-                    <a href="{{ route('incoming.index', ['unit_id' => '']) }}" class="btn-secondary-modern">
+                    <a href="{{ route('incoming.index', ['unit_id' => '', 'search' => request('search')]) }}" class="btn-secondary-modern">
                         Reset
                     </a>
                 </div>
@@ -53,6 +54,25 @@
     </div>
 @endif
 
+<div class="pb-2">
+    <form method="GET" action="{{ route('incoming.index') }}" class="filter-card px-4 py-4 md:px-5 border border-[#d8e2f0] bg-gradient-to-b from-white to-[#f8fbff]" data-live-search-form>
+        @if(auth()->user()->isAdmin() && $selectedUnitId)
+            <input type="hidden" name="unit_id" value="{{ $selectedUnitId }}">
+        @endif
+        <div class="flex flex-col gap-3 md:flex-row md:items-end">
+            <div class="min-w-0 md:flex-1">
+                <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.06em] text-slate-500">Search document</label>
+                <input
+                    type="text"
+                    name="search"
+                    value="{{ request('search') }}"
+                    placeholder="Document number, title, type, or unit"
+                    class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition duration-200 hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                >
+            </div>
+</div>
+    </form>
+</div>
 <!-- CENTER WRAPPER -->
 <div class="py-6">
     <div class="table-shell">
@@ -124,7 +144,7 @@
                     <tr class="table-row">
 
                         <td class="table-cell font-medium text-slate-700 text-left">
-                            {{ $loop->iteration }}
+                            {{ $documents->firstItem() + $loop->index }}
                         </td>
 
                         <td class="table-cell font-semibold text-slate-900 text-left">
@@ -464,6 +484,8 @@
                 </tbody>
             </table>
         </div>
+
+        @include('partials.pagination-controls', ['paginator' => $documents])
     </div>
 
 </div>
@@ -805,3 +827,12 @@
 </style>
 
 @endsection
+
+
+
+
+
+
+
+
+

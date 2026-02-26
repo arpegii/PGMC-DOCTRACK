@@ -16,6 +16,12 @@ class IncomingController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+        $searchQuery = trim((string) $request->input('search', ''));
+        $allowedPerPage = [10, 25, 50, 100];
+        $perPage = (int) $request->integer('per_page', 10);
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 10;
+        }
         $selectedUnitId = null;
         $filterUnits = $user->isAdmin() ? Unit::all() : collect();
 
@@ -45,14 +51,46 @@ class IncomingController extends Controller
                 });
             }
 
-            $documents = $query->orderBy('created_at', 'desc')->get();
+            if ($searchQuery !== '') {
+                $query->where(function ($subQuery) use ($searchQuery) {
+                    $subQuery->where('document_number', 'like', "%{$searchQuery}%")
+                        ->orWhere('title', 'like', "%{$searchQuery}%")
+                        ->orWhere('document_type', 'like', "%{$searchQuery}%")
+                        ->orWhereHas('senderUnit', function ($unitQuery) use ($searchQuery) {
+                            $unitQuery->where('name', 'like', "%{$searchQuery}%");
+                        })
+                        ->orWhereHas('receivingUnit', function ($unitQuery) use ($searchQuery) {
+                            $unitQuery->where('name', 'like', "%{$searchQuery}%");
+                        });
+                });
+            }
+
+            $documents = $query->orderBy('created_at', 'desc')
+                ->paginate($perPage)
+                ->withQueryString();
         } else {
             // Regular users see ONLY incoming documents sent to their unit
-            $documents = Document::with(['senderUnit', 'receivingUnit'])
+            $query = Document::with(['senderUnit', 'receivingUnit'])
                 ->where('receiving_unit_id', $user->unit_id)
-                ->where('status', 'incoming')  // Only show pending/incoming documents
-                ->orderBy('created_at', 'desc')
-                ->get();
+                ->where('status', 'incoming');
+
+            if ($searchQuery !== '') {
+                $query->where(function ($subQuery) use ($searchQuery) {
+                    $subQuery->where('document_number', 'like', "%{$searchQuery}%")
+                        ->orWhere('title', 'like', "%{$searchQuery}%")
+                        ->orWhere('document_type', 'like', "%{$searchQuery}%")
+                        ->orWhereHas('senderUnit', function ($unitQuery) use ($searchQuery) {
+                            $unitQuery->where('name', 'like', "%{$searchQuery}%");
+                        })
+                        ->orWhereHas('receivingUnit', function ($unitQuery) use ($searchQuery) {
+                            $unitQuery->where('name', 'like', "%{$searchQuery}%");
+                        });
+                });
+            }
+
+            $documents = $query->orderBy('created_at', 'desc')
+                ->paginate($perPage)
+                ->withQueryString();
         }
         
         // Get units for the create form (excluding admin unit for non-admins)

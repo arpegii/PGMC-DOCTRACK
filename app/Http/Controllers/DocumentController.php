@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Support\Str;
 
 class DocumentController extends Controller
 {
@@ -137,7 +138,8 @@ class DocumentController extends Controller
         $filePath = null;
         if ($request->hasFile('file')) {
             $file = $request->file('file');
-            $fileName = time() . '_' . $file->getClientOriginalName();
+            $extension = strtolower($file->extension() ?: $file->getClientOriginalExtension());
+            $fileName = Str::uuid()->toString() . '.' . $extension;
             $filePath = $file->storeAs('documents', $fileName, 'local');
         }
 
@@ -404,6 +406,12 @@ class DocumentController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
+        $searchQuery = trim((string) $request->input('search', ''));
+        $allowedPerPage = [10, 25, 50, 100];
+        $perPage = (int) $request->integer('per_page', 10);
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 10;
+        }
         $selectedUnitId = null;
         $filterUnits = $user->isAdmin() ? Unit::all() : collect();
 
@@ -447,9 +455,30 @@ class DocumentController extends Controller
             });
         }
 
+        if ($searchQuery !== '') {
+            $forwardHistoriesQuery->where(function ($query) use ($searchQuery) {
+                $query->whereHas('document', function ($docQuery) use ($searchQuery) {
+                    $docQuery->where('document_number', 'like', "%{$searchQuery}%")
+                        ->orWhere('title', 'like', "%{$searchQuery}%")
+                        ->orWhere('document_type', 'like', "%{$searchQuery}%")
+                        ->orWhereHas('senderUnit', function ($unitQuery) use ($searchQuery) {
+                            $unitQuery->where('name', 'like', "%{$searchQuery}%");
+                        })
+                        ->orWhereHas('receivingUnit', function ($unitQuery) use ($searchQuery) {
+                            $unitQuery->where('name', 'like', "%{$searchQuery}%");
+                        });
+                })->orWhereHas('fromUnit', function ($unitQuery) use ($searchQuery) {
+                    $unitQuery->where('name', 'like', "%{$searchQuery}%");
+                })->orWhereHas('toUnit', function ($unitQuery) use ($searchQuery) {
+                    $unitQuery->where('name', 'like', "%{$searchQuery}%");
+                });
+            });
+        }
+
         $forwardHistories = $forwardHistoriesQuery
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate($perPage)
+            ->withQueryString();
 
         $units = Unit::all();
 

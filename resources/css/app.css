@@ -88,6 +88,48 @@
         @apply panel-surface px-4 py-4;
     }
 
+    .search-card {
+        @apply px-4 py-4 md:px-5;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+        border-color: #d8e2f0;
+    }
+
+    .search-toolbar {
+        @apply flex flex-col gap-3 md:flex-row md:items-end;
+    }
+
+    .search-field-wrap {
+        @apply min-w-0 md:flex-1;
+    }
+
+    .search-label {
+        @apply mb-2 block text-xs font-semibold uppercase tracking-[0.06em] text-slate-500;
+    }
+
+    .search-input-modern {
+        @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition duration-200 hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200;
+    }
+
+    .search-actions {
+        @apply flex items-center gap-2 md:ml-auto;
+    }
+
+    .search-actions .btn-primary-modern,
+    .search-actions .btn-secondary-modern {
+        @apply min-w-[84px];
+    }
+
+    @media (max-width: 767px) {
+        .search-actions {
+            @apply w-full;
+        }
+
+        .search-actions .btn-primary-modern,
+        .search-actions .btn-secondary-modern {
+            @apply flex-1;
+        }
+    }
+
     .form-select-modern {
         @apply w-full rounded-xl border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200;
     }

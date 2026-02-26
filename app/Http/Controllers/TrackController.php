@@ -15,10 +15,16 @@ class TrackController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+        $allowedPerPage = [10, 25, 50, 100];
+        $perPage = (int) $request->integer('per_page', 10);
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 10;
+        }
+
         $documents = collect(); // Empty collection initially
-        $searchQuery = $request->input('search');
+        $searchQuery = trim((string) $request->input('search', ''));
         
-        if ($searchQuery) {
+        if ($searchQuery !== '') {
             // Build base query with access control and eager load all relationships
             $query = Document::with([
                 'senderUnit',
@@ -43,14 +49,12 @@ class TrackController extends Controller
                 });
             }
             
-            // Apply search filters
-            $query->where(function($q) use ($searchQuery) {
-                $q->where('document_number', 'LIKE', "%{$searchQuery}%")
-                  ->orWhere('title', 'LIKE', "%{$searchQuery}%")
-                  ->orWhere('document_type', 'LIKE', "%{$searchQuery}%");
-            });
+            // Strict search: require exact full document number match.
+            $query->whereRaw('LOWER(document_number) = ?', [mb_strtolower($searchQuery)]);
             
-            $documents = $query->orderBy('created_at', 'desc')->get();
+            $documents = $query->orderBy('created_at', 'desc')
+                ->paginate($perPage)
+                ->withQueryString();
         }
         
         return view('track.track', compact('documents', 'searchQuery'));
