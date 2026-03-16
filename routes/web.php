@@ -73,6 +73,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/rejected', [RejectedController::class, 'index'])->name('rejected.index');
     Route::get('/history', [HistoryController::class, 'index'])->name('history.index');
     Route::get('/track', [TrackController::class, 'index'])->name('track.index');
+
     /*
     |--------------------------------------------------------------------------
     | Document Management Routes
@@ -95,6 +96,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/documents/{id}/receive', [DocumentController::class, 'receive'])->name('documents.receive');
     Route::post('/documents/{id}/reject', [DocumentController::class, 'reject'])->name('documents.reject');
 
+    // Resubmit a rejected document
+    Route::patch('/documents/{id}/resubmit', [RejectedController::class, 'resubmit'])->name('documents.resubmit');
+
     /*
     |--------------------------------------------------------------------------
     | Report Generation Routes
@@ -105,4 +109,3 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 require __DIR__.'/auth.php';
-

@@ -93,13 +93,10 @@
                                         Details
                                     </a>
                                     <button
-                                        @click="window.dispatchEvent(new CustomEvent('open-forward-modal', { 
-                                            detail: { 
-                                                documentId: {{ $document->id }}, 
-                                                documentNumber: '{{ $document->document_number }}', 
-                                                documentTitle: '{{ addslashes($document->title) }}' 
-                                            } 
-                                        }))"
+                                        data-document-id="{{ $document->id }}"
+                                        data-document-number="{{ $document->document_number }}"
+                                        data-document-title="{{ $document->title }}"
+                                        onclick="openForwardModalFromBtn(this)"
                                         type="button"
                                         class="action-btn bg-blue-100 text-blue-700 hover:bg-blue-200">
                                         Forward
@@ -504,8 +501,15 @@
         event.preventDefault();
         try {
             const form = document.getElementById('forward-form');
-            const unitSelect = form.querySelector('select[name=forward_to_unit_id]');
-            this.forwardedUnitName = unitSelect.options[unitSelect.selectedIndex].text;
+            const unitInput = document.getElementById('forward-unit-hidden-input');
+            if (!unitInput || !unitInput.value) {
+                alert('Please select a unit to forward to.');
+                return;
+            }
+            const unitLabel = document.getElementById('forward-unit-picker-label');
+            this.forwardedUnitName = unitLabel ? unitLabel.textContent : '';
+            const backdrop = document.querySelector('[x-show=openForward]');
+            if (backdrop) backdrop.dataset.submitting = '1';
             this.openForward = false;
             this.showSuccessForward = true;
             setTimeout(() => { form.submit(); }, 1500);
@@ -516,12 +520,13 @@
     }
 }"
 @open-forward-modal.window="
-    openForward = true; 
+    openForward = true;
     selectedDocumentId = $event.detail.documentId;
     selectedDocumentNumber = $event.detail.documentNumber;
     selectedDocumentTitle = $event.detail.documentTitle;
     selectedUnit = '';
-">
+"
+>
 
     <!-- FORWARD MODAL BACKDROP -->
     <div
@@ -708,11 +713,9 @@
                     </button>
                     <button
                         type="submit"
-                        :disabled="!selectedUnit"
                         class="px-6 py-2.5 rounded-lg text-white font-semibold text-sm
                                shadow-lg hover:shadow-xl transition duration-200
-                               transform hover:-translate-y-0.5
-                               disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                               transform hover:-translate-y-0.5"
                         style="background-color:#0B1F3A;"
                     >
                         <span class="flex items-center gap-2">
@@ -870,6 +873,19 @@
     }
 
     // ── Forward modal — unit picker ──────────────────────────────────────────
+    function openForwardModalFromBtn(btn) {
+        if (!btn) return;
+        openForwardModal({
+            documentId: btn.dataset.documentId,
+            documentNumber: btn.dataset.documentNumber || '',
+            documentTitle: btn.dataset.documentTitle || ''
+        });
+    }
+
+    function openForwardModal(detail) {
+        window.dispatchEvent(new CustomEvent('open-forward-modal', { detail }));
+    }
+
     function toggleForwardUnitDropdown(e) {
         e.stopPropagation();
         const dropdown = document.getElementById('forward-unit-dropdown');
@@ -882,7 +898,7 @@
         document.getElementById('forward-unit-hidden-input').value = id;
         // Also update Alpine x-model by dispatching an input event
         const input = document.getElementById('forward-unit-hidden-input');
-        input.dispatchEvent(new Event('input'));
+        input.dispatchEvent(new Event('input', { bubbles: true }));
         const label = document.getElementById('forward-unit-picker-label');
         label.textContent = name;
         label.style.color = '#111827';
@@ -1031,6 +1047,9 @@
         if (forwardBackdrop) {
             new MutationObserver(function () {
                 if (forwardBackdrop.style.display === 'none') {
+                    if (forwardBackdrop.dataset.submitting === '1') {
+                        return;
+                    }
                     document.getElementById('forward-unit-hidden-input').value = '';
                     const fl = document.getElementById('forward-unit-picker-label');
                     fl.textContent = 'Select unit to forward to';

@@ -137,11 +137,13 @@ class DocumentController extends Controller
         ]);
 
         $filePath = null;
+        $fileNameOriginal = null;
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $extension = strtolower($file->extension() ?: $file->getClientOriginalExtension());
             $fileName = Str::uuid()->toString() . '.' . $extension;
             $filePath = $file->storeAs('documents', $fileName, 'local');
+            $fileNameOriginal = $file->getClientOriginalName();
         }
 
         $document = Document::create([
@@ -151,6 +153,7 @@ class DocumentController extends Controller
             'sender_unit_id' => $user->unit_id,
             'receiving_unit_id' => $request->receiving_unit_id,
             'file_path' => $filePath,
+            'file_name' => $fileNameOriginal,
             'status' => 'incoming',
             'created_by' => $user->id,
         ]);
@@ -347,7 +350,8 @@ class DocumentController extends Controller
             'rejectedBy',
             'forwardHistory.fromUnit',
             'forwardHistory.toUnit',
-            'forwardHistory.forwardedBy'
+            'forwardHistory.forwardedBy',
+            'lastResubmittedByUser',  // ← added for resubmit notes display
         ])->findOrFail($id);
 
         if (!$user->isAdmin()) {
@@ -397,7 +401,7 @@ class DocumentController extends Controller
             abort(404, 'File not found.');
         }
 
-        return $disk->download($document->file_path);
+        return $disk->download($document->file_path, $document->file_name ?: null);
     }
 
     /**

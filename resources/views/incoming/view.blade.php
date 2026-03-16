@@ -33,7 +33,12 @@
                         Document #{{ $document->document_number }}
                     </p>
                 </div>
-                <div>
+                <div class="flex items-center gap-2">
+                    @if($document->resubmit_count > 0)
+                        <span class="px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold border border-orange-200">
+                            Resubmitted {{ $document->resubmit_count }}×
+                        </span>
+                    @endif
                     @if($document->status == 'incoming')
                         <span class="px-4 py-2 rounded-full bg-yellow-100 text-yellow-800 text-sm font-semibold">
                             Pending
@@ -115,7 +120,7 @@
                                 </svg>
                             </div>
                             <div>
-                                <p class="text-sm font-medium text-gray-900">{{ basename($document->file_path) }}</p>
+                                <p class="text-sm font-medium text-gray-900">{{ $document->file_name ?? basename($document->file_path) }}</p>
                                 <p class="text-xs text-gray-500">Uploaded file</p>
                             </div>
                         </div>
@@ -131,6 +136,47 @@
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Attached File</label>
                 <div class="px-4 py-4 bg-gray-50 rounded-lg border border-gray-200 text-center text-gray-500">
                     No file attached
+                </div>
+            </div>
+            @endif
+
+            <!-- Resubmit Notes (show if document has been resubmitted) -->
+            @if($document->resubmit_count > 0 && $document->resubmit_notes)
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-3">Latest Resubmission Notes</label>
+                <div class="bg-gradient-to-br from-orange-50 to-orange-100/50 border-2 border-orange-300 rounded-xl p-6 shadow-sm">
+                    <div class="flex items-start gap-4 mb-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center shadow-lg">
+                                <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-lg font-bold text-orange-900 mb-1">
+                                Resubmission #{{ $document->resubmit_count }}
+                            </p>
+                            <div class="flex items-center gap-2 text-orange-700">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                @if($document->last_resubmitted_at)
+                                <p class="text-xs font-semibold">
+                                    {{ $document->last_resubmitted_at->format('F d, Y') }} at {{ $document->last_resubmitted_at->format('h:i A') }}
+                                    @if($document->lastResubmittedByUser)
+                                        • Resubmitted by {{ $document->lastResubmittedByUser->name }}
+                                    @endif
+                                </p>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg border-2 border-orange-200 p-4 shadow-sm">
+                        <p class="text-xs font-bold text-orange-800 uppercase tracking-wide mb-2">Resubmission Notes</p>
+                        <p class="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{{ $document->resubmit_notes }}</p>
+                    </div>
                 </div>
             </div>
             @endif

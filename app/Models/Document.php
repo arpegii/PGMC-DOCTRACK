@@ -16,6 +16,7 @@ class Document extends Model
         'title',
         'document_type',
         'file_path',
+        'file_name',
         'sender_unit_id',
         'receiving_unit_id',
         'status',
@@ -29,6 +30,11 @@ class Document extends Model
         'forwarding_notes',
         'original_document_id',
         'created_by',
+        // Resubmission fields
+        'resubmit_notes',
+        'resubmit_count',
+        'last_resubmitted_at',
+        'last_resubmitted_by',
     ];
 
     /**
@@ -37,11 +43,13 @@ class Document extends Model
      * @var array
      */
     protected $casts = [
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'rejected_at' => 'datetime',
-        'received_at' => 'datetime',
-        'forwarded_at' => 'datetime',
+        'created_at'          => 'datetime',
+        'updated_at'          => 'datetime',
+        'rejected_at'         => 'datetime',
+        'received_at'         => 'datetime',
+        'forwarded_at'        => 'datetime',
+        'last_resubmitted_at' => 'datetime',
+        'resubmit_count'      => 'integer',
     ];
 
     /** @return \Illuminate\Database\Eloquent\Relations\BelongsTo */
@@ -108,4 +116,21 @@ class Document extends Model
         return $this->belongsTo(User::class, 'rejected_by');
     }
 
+    /**
+     * All resubmission history entries for this document,
+     * oldest first (attempt 1, 2, 3 …)
+     */
+    public function resubmitHistory()
+    {
+        return $this->hasMany(DocumentResubmitHistory::class, 'document_id')
+                    ->orderBy('attempt', 'asc');
+    }
+
+    /**
+     * The user who last resubmitted this document
+     */
+    public function lastResubmittedByUser()
+    {
+        return $this->belongsTo(User::class, 'last_resubmitted_by');
+    }
 }

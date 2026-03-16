@@ -7,6 +7,7 @@ use App\Models\DocumentType;
 use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class RejectedController extends Controller
 {
@@ -23,10 +24,8 @@ class RejectedController extends Controller
             $perPage = 10;
         }
         $selectedUnitId = null;
-        // Make filter units available to all users
         $filterUnits = $user->isAdmin() ? Unit::all() : Unit::visibleToUser($user);
 
-        // Handle unit filtering for both admins and regular users
         if ($request->has('unit_id')) {
             $selectedUnitId = $request->input('unit_id');
             if ($selectedUnitId) {
@@ -38,14 +37,10 @@ class RejectedController extends Controller
             $selectedUnitId = $request->session()->get('unit_filter_id');
         }
 
-        // Get all units for dropdowns or safe display in view
         $units = Unit::visibleToUser($user);
-
-        // Get all document types from the database
         $documentTypes = DocumentType::orderBy('name')->get();
 
         if ($user->isAdmin()) {
-            // Admin sees all rejected documents
             $query = Document::with(['senderUnit', 'receivingUnit'])
                 ->where('status', 'rejected');
 
@@ -74,12 +69,10 @@ class RejectedController extends Controller
                 ->paginate($perPage)
                 ->withQueryString();
         } else {
-            // Users see rejected documents sent by their unit.
             $query = Document::with(['senderUnit', 'receivingUnit'])
                 ->where('status', 'rejected')
                 ->where('sender_unit_id', $user->unit_id);
 
-            // Apply unit filter for regular users (by receiving unit)
             if ($selectedUnitId) {
                 $query->where('receiving_unit_id', $selectedUnitId);
             }
@@ -103,13 +96,107 @@ class RejectedController extends Controller
                 ->withQueryString();
         }
 
-        // Pass both documents and units to the view
         return view('rejected.rejected', compact(
             'documents',
             'units',
             'filterUnits',
             'selectedUnitId',
-            'documentTypes'  // <-- added
+            'documentTypes'
         ));
+    }
+
+    /**
+     * Resubmit a rejected document.
+     * Snapshots the before/after state into document_resubmit_history,
+     * increments the attempt counter, clears the rejection reason, and
+     * sets status back to 'incoming' so it lands in the receiving unit's
+     * incoming queue.
+     */
+    public function resubmit(Request $request, $id)
+    {
+        $user     = Auth::user();
+        $document = Document::findOrFail($id);
+
+        // Only the sender unit or an admin may resubmit
+        if (!$user->isAdmin() && (int) $document->sender_unit_id !== (int) $user->unit_id) {
+            abort(403, 'You are not authorised to resubmit this document.');
+        }
+
+        // Must still be in rejected state
+        if ($document->status !== 'rejected') {
+            return redirect()->route('rejected.index')
+                ->with('error', 'Only rejected documents can be resubmitted.');
+        }
+
+        $request->validate([
+            'title'             => 'required|string|max:255',
+            'receiving_unit_id' => 'required|exists:units,id',
+            'document_type'     => 'required|string|max:255',
+            'resubmit_notes'    => 'nullable|string|max:1000',
+            'file'              => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:25600',
+        ]);
+
+        // Prevent sending to own unit
+        if ((int) $request->receiving_unit_id === (int) $user->unit_id) {
+            return back()->withErrors(['receiving_unit_id' => 'You cannot send a document to your own unit.']);
+        }
+
+        // ── Snapshot BEFORE values ────────────────────────────────
+        $previousTitle           = $document->title;
+        $previousDocumentType    = $document->document_type;
+        $previousReceivingUnitId = $document->receiving_unit_id;
+        $previousFilePath        = $document->file_path;
+        $previousFileName        = $document->file_name;
+        $previousRejectionReason = $document->rejection_reason;
+
+        // ── Apply new file if provided ────────────────────────────
+        $newFilePath = $previousFilePath; // default: keep existing
+        $newFileName = $previousFileName;
+        if ($request->hasFile('file')) {
+            if ($previousFilePath && Storage::exists($previousFilePath)) {
+                Storage::delete($previousFilePath);
+            }
+            $newFilePath = $request->file('file')->store('documents');
+            $newFileName = $request->file('file')->getClientOriginalName();
+        }
+
+        // ── Update document ───────────────────────────────────────
+        $nextAttempt = ($document->resubmit_count ?? 0) + 1;
+
+        $document->title               = $request->title;
+        $document->receiving_unit_id   = $request->receiving_unit_id;
+        $document->document_type       = $request->document_type;
+        $document->file_path           = $newFilePath;
+        $document->file_name           = $newFileName;
+        $document->resubmit_notes      = $request->resubmit_notes;
+        $document->resubmit_count      = $nextAttempt;
+        $document->last_resubmitted_at = now();
+        $document->last_resubmitted_by = $user->id;
+        $document->status              = 'incoming'; // lands in receiving unit's incoming queue
+        $document->rejection_reason    = null;        // clear previous rejection
+
+        $document->save();
+
+        // ── Write immutable history row ───────────────────────────
+        \App\Models\DocumentResubmitHistory::create([
+            'document_id'                => $document->id,
+            'attempt'                    => $nextAttempt,
+            'previous_title'             => $previousTitle,
+            'previous_document_type'     => $previousDocumentType,
+            'previous_receiving_unit_id' => $previousReceivingUnitId,
+            'previous_file_path'         => $previousFilePath,
+            'previous_file_name'         => $previousFileName,
+            'new_title'                  => $document->title,
+            'new_document_type'          => $document->document_type,
+            'new_receiving_unit_id'      => $document->receiving_unit_id,
+            'new_file_path'              => $newFilePath,
+            'new_file_name'              => $newFileName,
+            'rejection_reason'           => $previousRejectionReason,
+            'resubmit_notes'             => $request->resubmit_notes,
+            'resubmitted_by'             => $user->id,
+        ]);
+
+        return redirect()->route('rejected.index')
+            ->with('success', 'Document resubmitted successfully and sent to the receiving unit\'s incoming queue.');
     }
 }

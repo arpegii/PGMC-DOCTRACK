@@ -10,7 +10,7 @@ class TrackController extends Controller
 {
     /**
      * Display track/search page
-     * UPDATED: Now includes forwarding history in access control
+     * UPDATED: Now includes forwarding history and resubmit history in access control
      */
     public function index(Request $request)
     {
@@ -34,7 +34,10 @@ class TrackController extends Controller
                 'rejectedBy',
                 'forwardHistory.fromUnit',
                 'forwardHistory.toUnit',
-                'forwardHistory.forwardedBy'
+                'forwardHistory.forwardedBy',
+                'resubmitHistory.resubmittedByUser',       // ← added
+                'resubmitHistory.previousReceivingUnit',   // ← added
+                'resubmitHistory.newReceivingUnit',        // ← added
             ]);
             
             // Apply access control - includes forwarding history
