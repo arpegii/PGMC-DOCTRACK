@@ -134,6 +134,76 @@
         @apply w-full rounded-xl border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200;
     }
 
+    .unit-filter {
+        position: relative;
+    }
+
+    .unit-filter-trigger {
+        @apply w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm outline-none transition duration-200 hover:border-gray-400 text-left;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .unit-filter-chevron {
+        width: 1rem;
+        height: 1rem;
+        color: #9ca3af;
+        flex-shrink: 0;
+    }
+
+    .unit-filter-menu {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        width: 100%;
+        border-radius: 0.625rem;
+        border: 1px solid #d1d5db;
+        background: #ffffff;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        max-height: 220px;
+        overflow-y: auto;
+        z-index: 40;
+    }
+
+    .unit-filter-menu.is-hidden {
+        display: none;
+    }
+
+    .unit-filter-option {
+        width: 100%;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding: 0.6rem 1rem;
+        font-size: 0.875rem;
+        color: #374151;
+        cursor: pointer;
+        transition: background 0.15s ease;
+    }
+
+    .unit-filter-option:hover {
+        background: #f3f4f6;
+    }
+
+    .unit-filter-option-icon {
+        width: 13px;
+        height: 13px;
+        color: #9ca3af;
+        flex-shrink: 0;
+    }
+
+    .unit-filter-flyout-item {
+        padding: 0.6rem 1rem;
+        font-size: 0.875rem;
+        color: #374151;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+
     .btn-primary-modern {
         @apply inline-flex items-center justify-center rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-800 hover:shadow;
     }
@@ -149,6 +219,39 @@
 
     .table-modern {
         @apply w-full border-collapse text-sm text-slate-700;
+        table-layout: auto;
+    }
+
+    .table-modern th,
+    .table-modern td {
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+
+    .badge-chip {
+        white-space: nowrap;
+    }
+
+    .table-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .table-actions a,
+    .table-actions button,
+    .table-actions .action-btn,
+    .table-actions .action-btn-disabled,
+    .table-actions .action-btn-primary,
+    .table-actions .action-btn-danger,
+    .table-actions .action-btn-neutral,
+    .table-actions .action-btn-success {
+        min-width: 72px;
+        white-space: nowrap;
+        text-align: center;
     }
 
     .table-head {

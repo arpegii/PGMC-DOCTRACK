@@ -42,7 +42,7 @@
 
     {{-- Page Header (supports x-app-layout + @section) --}}
     @if (isset($header))
-        <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <header class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
             <div class="panel-surface px-6 py-5">
                 <div class="text-slate-900">
                     {{ $header }}
@@ -50,13 +50,13 @@
             </div>
         </header>
     @elseif(View::hasSection('header'))
-        <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <header class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
             @yield('header')
         </header>
     @endif
 
     {{-- Page Content --}}
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <main class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {{ $slot ?? '' }}
         @yield('content')
     </main>

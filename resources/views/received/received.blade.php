@@ -16,14 +16,84 @@
         <div class="flex flex-col gap-3 md:flex-row md:items-end">
             <div class="min-w-0 md:w-1/3">
                 <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.06em] text-slate-500">Filter by unit</label>
-                <select name="unit_id" class="form-select-modern" onchange="this.form.submit()">
-                    <option value="">All units</option>
-                    @foreach($filterUnits as $unit)
-                        <option value="{{ $unit->id }}" {{ (string) $selectedUnitId === (string) $unit->id ? 'selected' : '' }}>
-                            {{ $unit->name }}
-                        </option>
-                    @endforeach
-                </select>
+                @php
+                    $selectedUnitLabel = 'All units';
+                    $pauSubUnits = ['Resumption NCO', 'TOP NCO', 'Restoration NCO', 'Prior Years NCO', 'Pension Differential 18-19', 'Own Right NCO'];
+                    $bgcuSubUnits = ['Posthumous NCO', 'Retirement NCO', 'RSAB NCO', 'CDD NCO'];
+                    foreach ($filterUnits as $unit) {
+                        if ((string) $unit->id === (string) $selectedUnitId) {
+                            $selectedUnitLabel = $unit->name;
+                            break;
+                        }
+                    }
+                @endphp
+                <div class="unit-filter" data-filter-unit-picker>
+                    <input type="hidden" name="unit_id" value="{{ $selectedUnitId ?? '' }}" data-filter-unit-input>
+                    <button
+                        type="button"
+                        class="unit-filter-trigger"
+                        data-filter-unit-trigger
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        style="color: {{ $selectedUnitId ? '#111827' : '#6b7280' }};"
+                    >
+                        <span class="unit-filter-label" data-filter-unit-label>{{ $selectedUnitLabel }}</span>
+                        <svg class="unit-filter-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                            <path d="M5 7l5 5 5-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <div class="unit-filter-menu is-hidden" data-filter-unit-menu role="listbox">
+                        <div
+                            class="unit-filter-option"
+                            data-filter-unit-option
+                            data-unit-id=""
+                            data-unit-name="All units"
+                        >
+                            All units
+                        </div>
+                        @foreach($filterUnits as $unit)
+                            @if(in_array($unit->name, array_merge($pauSubUnits, $bgcuSubUnits), true))
+                                @continue
+                            @endif
+                            @if($unit->name === 'PAU')
+                                <div
+                                    class="unit-filter-option"
+                                    data-filter-unit-option
+                                    data-unit-id="{{ $unit->id }}"
+                                    data-unit-name="PAU"
+                                    data-has-flyout="pau"
+                                >
+                                    <span>PAU</span>
+                                    <svg class="unit-filter-option-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                        <path d="M8 5l5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                            @elseif($unit->name === 'BGCU')
+                                <div
+                                    class="unit-filter-option"
+                                    data-filter-unit-option
+                                    data-unit-id="{{ $unit->id }}"
+                                    data-unit-name="BGCU"
+                                    data-has-flyout="bgcu"
+                                >
+                                    <span>BGCU</span>
+                                    <svg class="unit-filter-option-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                        <path d="M8 5l5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                            @else
+                                <div
+                                    class="unit-filter-option"
+                                    data-filter-unit-option
+                                    data-unit-id="{{ $unit->id }}"
+                                    data-unit-name="{{ $unit->name }}"
+                                >
+                                    {{ $unit->name }}
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
             </div>
             <div class="min-w-0 md:flex-1">
                 <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.06em] text-slate-500">Search document</label>
@@ -37,6 +107,69 @@
             </div>
         </div>
     </form>
+</div>
+
+<!-- Filter flyouts -->
+<div
+    data-filter-flyout="pau"
+    style="
+        display:none;
+        position:fixed;
+        width:230px;
+        background:white;
+        border:1px solid #c7dcff;
+        border-radius:0.625rem;
+        box-shadow:0 8px 24px rgba(0,0,0,0.15);
+        z-index:999999;
+        overflow:hidden;
+    "
+>
+    <div style="padding:0.5rem 1rem 0.4rem; font-size:0.7rem; font-weight:700; color:#1e5ba8; background:#f0f6ff; border-bottom:1px solid #c7dcff; letter-spacing:0.05em;">
+        PAU SUB-UNITS
+    </div>
+    @foreach($filterUnits as $subUnit)
+        @if(in_array($subUnit->name, $pauSubUnits, true))
+            <div
+                class="unit-filter-flyout-item"
+                data-filter-flyout-item
+                data-unit-id="{{ $subUnit->id }}"
+                data-unit-name="{{ $subUnit->name }}"
+            >
+                {{ $subUnit->name }}
+            </div>
+        @endif
+    @endforeach
+</div>
+
+<div
+    data-filter-flyout="bgcu"
+    style="
+        display:none;
+        position:fixed;
+        width:210px;
+        background:white;
+        border:1px solid #c7dcff;
+        border-radius:0.625rem;
+        box-shadow:0 8px 24px rgba(0,0,0,0.15);
+        z-index:999999;
+        overflow:hidden;
+    "
+>
+    <div style="padding:0.5rem 1rem 0.4rem; font-size:0.7rem; font-weight:700; color:#1e5ba8; background:#f0f6ff; border-bottom:1px solid #c7dcff; letter-spacing:0.05em;">
+        BGCU SUB-UNITS
+    </div>
+    @foreach($filterUnits as $subUnit)
+        @if(in_array($subUnit->name, $bgcuSubUnits, true))
+            <div
+                class="unit-filter-flyout-item"
+                data-filter-flyout-item
+                data-unit-id="{{ $subUnit->id }}"
+                data-unit-name="{{ $subUnit->name }}"
+            >
+                {{ $subUnit->name }}
+            </div>
+        @endif
+    @endforeach
 </div>
 
 <!-- CENTER WRAPPER -->
@@ -87,7 +220,7 @@
                                 {{ $document->updated_at->format('M d, Y h:i A') }}
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <div class="flex items-center justify-center gap-2" x-data>
+                                <div class="flex items-center justify-center gap-2 table-actions" x-data>
                                     <a href="{{ route('documents.view', ['id' => $document->id]) }}"
                                        class="action-btn bg-slate-100 text-slate-700 hover:bg-slate-200">
                                         Details
