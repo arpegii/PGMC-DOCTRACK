@@ -28,7 +28,7 @@
                     }
                 @endphp
                 <div class="unit-filter" data-filter-unit-picker>
-                    <input type="hidden" name="unit_id" value="{{ $selectedUnitId ?? '' }}" data-filter-unit-input>
+                    <input type="hidden" name="unit_id" id="filter-unit-hidden-input" value="{{ $selectedUnitId ?? '' }}" data-filter-unit-input>
                     <button
                         type="button"
                         class="unit-filter-trigger"
@@ -37,7 +37,7 @@
                         aria-expanded="false"
                         style="color: {{ $selectedUnitId ? '#111827' : '#6b7280' }};"
                     >
-                        <span class="unit-filter-label" data-filter-unit-label>{{ $selectedUnitLabel }}</span>
+                        <span class="unit-filter-label" id="filter-unit-picker-label" data-filter-unit-label>{{ $selectedUnitLabel }}</span>
                         <svg class="unit-filter-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                             <path d="M5 7l5 5 5-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
@@ -1082,13 +1082,15 @@
     }
 
     function selectUnit(id, name) {
-        document.getElementById('unit-hidden-input').value = id;
-        const label = document.getElementById('unit-picker-label');
+        document.getElementById('filter-unit-hidden-input').value = id;
+        const label = document.getElementById('filter-unit-picker-label');
         label.textContent = name;
-        label.style.color = '#111827';
+        label.style.color = id ? '#111827' : '#6b7280';
         document.getElementById('unit-dropdown').style.display = 'none';
         hideFlyout('pau-flyout');
         hideFlyout('bgcu-flyout');
+        // Submit the form to apply the filter
+        document.querySelector('[data-live-search-form]').submit();
     }
 
     function selectResubmitUnit(id, name) {
@@ -1165,6 +1167,11 @@
         [pauFlyout, bgcuFlyout].forEach(flyout => {
             flyout.addEventListener('mouseenter', () => clearTimeout(flyoutTimers[flyout.id]));
             flyout.addEventListener('mouseleave', () => hideFlyout(flyout.id));
+        });
+
+        // Filter dropdown option click
+        document.querySelectorAll('[data-filter-unit-option]').forEach(option => {
+            option.addEventListener('click', () => selectUnit(option.dataset.unitId, option.dataset.unitName));
         });
 
         document.querySelectorAll('.unit-row').forEach(row => {

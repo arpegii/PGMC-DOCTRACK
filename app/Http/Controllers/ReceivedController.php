@@ -27,16 +27,28 @@ class ReceivedController extends Controller
         // Make filter units available to all users
         $filterUnits = $user->isAdmin() ? Unit::all() : Unit::visibleToUser($user);
 
-        // Handle unit filtering for both admins and regular users
+        // Handle unit filtering - persist selection across pages
         if ($request->has('unit_id')) {
-            $selectedUnitId = $request->input('unit_id');
-            if ($selectedUnitId) {
-                $request->session()->put('unit_filter_id', $selectedUnitId);
+            $unitIdInput = $request->input('unit_id');
+            // If empty/null/0, user selected "all units"
+            if (empty($unitIdInput) || $unitIdInput === '0' || $unitIdInput === 0) {
+                $selectedUnitId = null;
+                $request->session()->put('unit_filter', 'all');
             } else {
-                $request->session()->forget('unit_filter_id');
+                // Specific unit selected
+                $selectedUnitId = (int) $unitIdInput;
+                $request->session()->put('unit_filter', $selectedUnitId);
             }
         } else {
-            $selectedUnitId = $request->session()->get('unit_filter_id');
+            // No filter in request, check session
+            $sessionFilter = $request->session()->get('unit_filter');
+            if ($sessionFilter === 'all') {
+                $selectedUnitId = null;
+            } elseif ($sessionFilter) {
+                $selectedUnitId = (int) $sessionFilter;
+            } else {
+                $selectedUnitId = null;
+            }
         }
 
         // Get filtered units for CREATE document form (excludes ADMN for non-admins)
@@ -50,7 +62,7 @@ class ReceivedController extends Controller
 
         if ($user->isAdmin()) {
             // Admin sees all received documents.
-            $query = Document::with(['senderUnit', 'receivingUnit'])
+            $query = Document::with(['senderUnit', 'receivingUnit', 'creator', 'receivedBy', 'forwardHistory.fromUnit', 'forwardHistory.toUnit'])
                 ->where('status', 'received');
 
             if ($selectedUnitId) {
@@ -79,7 +91,7 @@ class ReceivedController extends Controller
                 ->withQueryString();
         } else {
             // Users see all received documents for their unit.
-            $query = Document::with(['senderUnit', 'receivingUnit'])
+            $query = Document::with(['senderUnit', 'receivingUnit', 'creator', 'receivedBy', 'forwardHistory.fromUnit', 'forwardHistory.toUnit'])
                 ->where('receiving_unit_id', $user->unit_id)
                 ->where('status', 'received');
 

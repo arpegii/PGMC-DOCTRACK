@@ -8,6 +8,7 @@ use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class RejectedController extends Controller
 {
@@ -27,21 +28,36 @@ class RejectedController extends Controller
         $filterUnits = $user->isAdmin() ? Unit::all() : Unit::visibleToUser($user);
 
         if ($request->has('unit_id')) {
-            $selectedUnitId = $request->input('unit_id');
-            if ($selectedUnitId) {
-                $request->session()->put('unit_filter_id', $selectedUnitId);
+            $unitIdInput = $request->input('unit_id');
+            // If empty/null/0, user selected "all units"
+            if (empty($unitIdInput) || $unitIdInput === '0' || $unitIdInput === 0) {
+                $selectedUnitId = null;
+                $request->session()->put('unit_filter', 'all');
             } else {
-                $request->session()->forget('unit_filter_id');
+                // Specific unit selected
+                $selectedUnitId = (int) $unitIdInput;
+                $request->session()->put('unit_filter', $selectedUnitId);
             }
         } else {
-            $selectedUnitId = $request->session()->get('unit_filter_id');
+            // No filter in request, check session
+            $sessionFilter = $request->session()->get('unit_filter');
+            if ($sessionFilter === 'all') {
+                $selectedUnitId = null;
+            } elseif ($sessionFilter) {
+                $selectedUnitId = (int) $sessionFilter;
+            } else {
+                $selectedUnitId = null;
+            }
         }
 
         $units = Unit::visibleToUser($user);
         $documentTypes = DocumentType::orderBy('name')->get();
 
         if ($user->isAdmin()) {
-            $query = Document::with(['senderUnit', 'receivingUnit'])
+            $query = Document::with([
+                'senderUnit', 'receivingUnit', 'creator', 'rejectedBy',
+                'resubmitHistory.resubmittedByUser', 'forwardHistory.fromUnit', 'forwardHistory.toUnit'
+            ])
                 ->where('status', 'rejected');
 
             if ($selectedUnitId) {
@@ -69,7 +85,10 @@ class RejectedController extends Controller
                 ->paginate($perPage)
                 ->withQueryString();
         } else {
-            $query = Document::with(['senderUnit', 'receivingUnit'])
+            $query = Document::with([
+                'senderUnit', 'receivingUnit', 'creator', 'rejectedBy',
+                'resubmitHistory.resubmittedByUser', 'forwardHistory.fromUnit', 'forwardHistory.toUnit'
+            ])
                 ->where('status', 'rejected')
                 ->where('sender_unit_id', $user->unit_id);
 
@@ -128,18 +147,36 @@ class RejectedController extends Controller
                 ->with('error', 'Only rejected documents can be resubmitted.');
         }
 
+        // Get accessible units for validation
+        $accessibleUnitIds = $user->isAdmin() 
+            ? Unit::all()->pluck('id')->toArray()
+            : Unit::visibleToUser($user)->pluck('id')->toArray();
+
         $request->validate([
             'title'             => 'required|string|max:255',
-            'receiving_unit_id' => 'required|exists:units,id',
+            'receiving_unit_id' => [
+                'required',
+                'exists:units,id',
+                function ($attribute, $value, $fail) use ($user, $accessibleUnitIds) {
+                    // Check if receiving unit is in accessible units
+                    if (!in_array($value, $accessibleUnitIds, true)) {
+                        $fail('You cannot send documents to this unit.');
+                    }
+                    if (!$user->isAdmin() && $value == Unit::ADMIN_UNIT_ID) {
+                        $fail('You cannot send documents to the admin unit.');
+                    }
+                    if ($value == $user->unit_id) {
+                        $fail('You cannot send a document to your own unit.');
+                    }
+                },
+            ],
             'document_type'     => 'required|string|max:255',
             'resubmit_notes'    => 'nullable|string|max:1000',
             'file'              => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:25600',
+        ], [
+            'file.max' => 'The file must not be larger than 25MB.',
+            'file.mimes' => 'The file must be a PDF, DOC, DOCX, JPG, or PNG.',
         ]);
-
-        // Prevent sending to own unit
-        if ((int) $request->receiving_unit_id === (int) $user->unit_id) {
-            return back()->withErrors(['receiving_unit_id' => 'You cannot send a document to your own unit.']);
-        }
 
         // ── Snapshot BEFORE values ────────────────────────────────
         $previousTitle           = $document->title;
@@ -153,9 +190,19 @@ class RejectedController extends Controller
         $newFilePath = $previousFilePath; // default: keep existing
         $newFileName = $previousFileName;
         if ($request->hasFile('file')) {
-            if ($previousFilePath && Storage::exists($previousFilePath)) {
-                Storage::delete($previousFilePath);
+            try {
+                if ($previousFilePath && Storage::exists($previousFilePath)) {
+                    Storage::delete($previousFilePath);
+                }
+            } catch (\Exception $e) {
+                Log::warning('Failed to delete previous document file during resubmit', [
+                    'document_id' => $document->id,
+                    'file_path' => $previousFilePath,
+                    'error' => $e->getMessage(),
+                ]);
+                // Continue with new file even if old deletion failed
             }
+            
             $newFilePath = $request->file('file')->store('documents');
             $newFileName = $request->file('file')->getClientOriginalName();
         }

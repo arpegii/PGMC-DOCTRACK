@@ -26,16 +26,28 @@ class OutgoingController extends Controller
         // Make filter units available to all users
         $filterUnits = $user->isAdmin() ? Unit::all() : Unit::visibleToUser($user);
 
-        // Handle unit filtering for both admins and regular users
+        // Handle unit filtering - persist selection across pages
         if ($request->has('unit_id')) {
-            $selectedUnitId = $request->input('unit_id');
-            if ($selectedUnitId) {
-                $request->session()->put('unit_filter_id', $selectedUnitId);
+            $unitIdInput = $request->input('unit_id');
+            // If empty/null/0, user selected "all units"
+            if (empty($unitIdInput) || $unitIdInput === '0' || $unitIdInput === 0) {
+                $selectedUnitId = null;
+                $request->session()->put('unit_filter', 'all');
             } else {
-                $request->session()->forget('unit_filter_id');
+                // Specific unit selected
+                $selectedUnitId = (int) $unitIdInput;
+                $request->session()->put('unit_filter', $selectedUnitId);
             }
         } else {
-            $selectedUnitId = $request->session()->get('unit_filter_id');
+            // No filter in request, check session
+            $sessionFilter = $request->session()->get('unit_filter');
+            if ($sessionFilter === 'all') {
+                $selectedUnitId = null;
+            } elseif ($sessionFilter) {
+                $selectedUnitId = (int) $sessionFilter;
+            } else {
+                $selectedUnitId = null;
+            }
         }
 
         // Get units visible to the current user (excludes ADMN for non-admins)
@@ -46,7 +58,10 @@ class OutgoingController extends Controller
 
         if ($user->isAdmin()) {
             // Admin sees all pending outgoing documents.
-            $query = Document::with(['senderUnit', 'receivingUnit'])
+            $query = Document::with([
+                'senderUnit', 'receivingUnit', 'creator',
+                'forwardHistory.fromUnit', 'forwardHistory.toUnit', 'forwardHistory.forwardedBy'
+            ])
                 ->where('status', 'incoming');
 
             if ($selectedUnitId) {
@@ -75,7 +90,10 @@ class OutgoingController extends Controller
                 ->withQueryString();
         } else {
             // Users see pending documents sent by their unit.
-            $query = Document::with(['senderUnit', 'receivingUnit'])
+            $query = Document::with([
+                'senderUnit', 'receivingUnit', 'creator',
+                'forwardHistory.fromUnit', 'forwardHistory.toUnit', 'forwardHistory.forwardedBy'
+            ])
                 ->where('sender_unit_id', $user->unit_id)
                 ->where('status', 'incoming');
 

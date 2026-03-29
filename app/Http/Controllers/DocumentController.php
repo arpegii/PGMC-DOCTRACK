@@ -114,15 +114,24 @@ class DocumentController extends Controller
             return back()->withErrors(['error' => 'You are not assigned to a unit.']);
         }
 
+        // Get accessible units for validation
+        $accessibleUnitIds = $user->isAdmin() 
+            ? Unit::all()->pluck('id')->toArray()
+            : Unit::visibleToUser($user)->pluck('id')->toArray();
+
         $request->validate([
             'document_number' => 'required|unique:documents,document_number',
             'title' => 'required|string|max:255',
             'receiving_unit_id' => [
                 'required',
                 'exists:units,id',
-                function ($attribute, $value, $fail) use ($user) {
-                    if (!$user->isAdmin() && $value == Unit::ADMIN_UNIT_ID) {
+                function ($attribute, $value, $fail) use ($user, $accessibleUnitIds) {
+                    // Check if receiving unit is in accessible units
+                    if (!in_array($value, $accessibleUnitIds, true)) {
                         $fail('You cannot send documents to this unit.');
+                    }
+                    if (!$user->isAdmin() && $value == Unit::ADMIN_UNIT_ID) {
+                        $fail('You cannot send documents to the admin unit.');
                     }
                     if ($value == $user->unit_id) {
                         $fail('You cannot send a document to your own unit.');
@@ -184,29 +193,54 @@ class DocumentController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        /** @var Document $document */
-        $document = Document::findOrFail($id);
+        try {
+            DB::beginTransaction();
 
-        if ($document->receiving_unit_id !== $user->unit_id && !$user->isAdmin()) {
-            abort(403, 'Unauthorized action.');
+            /** @var Document $document */
+            $document = Document::lockForUpdate()->findOrFail($id);
+
+            if ($document->receiving_unit_id !== $user->unit_id && !$user->isAdmin()) {
+                abort(403, 'Unauthorized action.');
+            }
+
+            if ($document->status !== 'incoming') {
+                return back()->with('error', 'Document cannot be received. Current status: ' . $document->status);
+            }
+
+            $document->update([
+                'status' => 'received',
+                'received_at' => now(),
+                'received_by' => $user->id,
+            ]);
+
+            // Load relationships for notification
+            $document->load(['creator', 'senderUnit', 'receivingUnit']);
+
+            DB::commit();
+
+            // Notify ONLY the original sender (creator of the document)
+            if ($document->creator?->email) {
+                try {
+                    $document->creator->notify(new DocumentReceivedNotification($document, $user));
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to send document received notification', [
+                        'document_id' => $document->id,
+                        'user_id' => $document->created_by,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            return back()->with('success', 'Document marked as received!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error receiving document: ' . $e->getMessage(), [
+                'document_id' => $id,
+                'user_id' => $user->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()->with('error', 'Failed to mark document as received. Please try again.');
         }
-
-        if ($document->status !== 'incoming') {
-            return back()->with('error', 'Document cannot be received. Current status: ' . $document->status);
-        }
-
-        $document->update([
-            'status' => 'received',
-            'received_at' => now(),
-            'received_by' => $user->id,
-        ]);
-
-        // Notify ONLY the original sender (creator of the document)
-        if ($document->creator && $document->creator->email) {
-            $document->creator->notify(new DocumentReceivedNotification($document, $user));
-        }
-
-        return back()->with('success', 'Document marked as received!');
     }
 
     /**
@@ -221,32 +255,57 @@ class DocumentController extends Controller
             'rejection_reason' => 'nullable|string|max:1000',
         ]);
 
-        /** @var Document $document */
-        $document = Document::findOrFail($id);
+        try {
+            DB::beginTransaction();
 
-        if ($document->receiving_unit_id !== $user->unit_id && !$user->isAdmin()) {
-            abort(403, 'Unauthorized action.');
+            /** @var Document $document */
+            $document = Document::lockForUpdate()->findOrFail($id);
+
+            if ($document->receiving_unit_id !== $user->unit_id && !$user->isAdmin()) {
+                abort(403, 'Unauthorized action.');
+            }
+
+            if ($document->status !== 'incoming') {
+                return back()->with('error', 'Document cannot be rejected. Current status: ' . $document->status);
+            }
+
+            $rejectionReason = $request->input('rejection_reason');
+
+            $document->update([
+                'status' => 'rejected',
+                'rejected_at' => now(),
+                'rejected_by' => $user->id,
+                'rejection_reason' => $rejectionReason,
+            ]);
+
+            // Load relationships for notification
+            $document->load(['creator', 'senderUnit', 'receivingUnit']);
+
+            DB::commit();
+
+            // Notify ONLY the original sender (creator of the document)
+            if ($document->creator?->email) {
+                try {
+                    $document->creator->notify(new DocumentRejectedNotification($document, $user));
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to send document rejected notification', [
+                        'document_id' => $document->id,
+                        'user_id' => $document->created_by,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            return back()->with('success', 'Document rejected successfully!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error rejecting document: ' . $e->getMessage(), [
+                'document_id' => $id,
+                'user_id' => $user->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()->with('error', 'Failed to reject document. Please try again.');
         }
-
-        if ($document->status !== 'incoming') {
-            return back()->with('error', 'Document cannot be rejected. Current status: ' . $document->status);
-        }
-
-        $rejectionReason = $request->input('rejection_reason');
-
-        $document->update([
-            'status' => 'rejected',
-            'rejected_at' => now(),
-            'rejected_by' => $user->id,
-            'rejection_reason' => $rejectionReason,
-        ]);
-
-        // Notify ONLY the original sender (creator of the document)
-        if ($document->creator && $document->creator->email) {
-            $document->creator->notify(new DocumentRejectedNotification($document, $user));
-        }
-
-        return back()->with('success', 'Document rejected successfully!');
     }
 
     /**
@@ -421,16 +480,28 @@ class DocumentController extends Controller
         // Make filter units available to all users
         $filterUnits = $user->isAdmin() ? Unit::all() : Unit::visibleToUser($user);
 
-        // Handle unit filtering for both admins and regular users
+        // Handle unit filtering - persist selection across pages
         if ($request->has('unit_id')) {
-            $selectedUnitId = $request->input('unit_id');
-            if ($selectedUnitId) {
-                $request->session()->put('unit_filter_id', $selectedUnitId);
+            $unitIdInput = $request->input('unit_id');
+            // If empty/0, user selected "all units"
+            if ($unitIdInput === '' || $unitIdInput === '0' || $unitIdInput === 0) {
+                $selectedUnitId = null;
+                $request->session()->put('unit_filter', 'all');
             } else {
-                $request->session()->forget('unit_filter_id');
+                // Specific unit selected
+                $selectedUnitId = (int) $unitIdInput;
+                $request->session()->put('unit_filter', $selectedUnitId);
             }
         } else {
-            $selectedUnitId = $request->session()->get('unit_filter_id');
+            // No filter in request, check session
+            $sessionFilter = $request->session()->get('unit_filter');
+            if ($sessionFilter === 'all') {
+                $selectedUnitId = null;
+            } elseif ($sessionFilter) {
+                $selectedUnitId = (int) $sessionFilter;
+            } else {
+                $selectedUnitId = null;
+            }
         }
 
         $forwardHistoriesQuery = DocumentForwardHistory::with([
