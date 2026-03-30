@@ -525,13 +525,13 @@
 
 <!-- FLOATING UPLOAD BUTTON + MODAL -->
 <div x-data="{ 
-    open: false, 
+    showUploadModal: false, 
     documentNumber: '',
     loading: false,
     error: '',
     showSuccessUpload: false,
     async openModal() {
-        this.open = true;
+        this.showUploadModal = true;
         this.loading = true;
         this.error = '';
         this.documentNumber = 'Loading...';
@@ -560,15 +560,42 @@
             this.loading = false;
         }
     },
+    closeModal(resetForm = true) {
+        this.showUploadModal = false;
+        this.showSuccessUpload = false;
+        if (resetForm) {
+            document.getElementById('upload-form')?.reset();
+            const unitLabel = document.getElementById('unit-picker-label');
+            if (unitLabel) unitLabel.textContent = 'Select Receiving Unit';
+            const docLabel = document.getElementById('doctype-picker-label');
+            if (docLabel) docLabel.textContent = 'Select document type';
+            const customInput = document.getElementById('custom-doctype-input');
+            if (customInput) customInput.value = '';
+            const customContainer = document.getElementById('custom-doctype-container');
+            if (customContainer) customContainer.style.display = 'none';
+        }
+    },
     submitUpload(event) {
+        // Handle custom document type if Others is selected
+        const customInput = document.getElementById('custom-doctype-input');
+        const hiddenInput = document.getElementById('doctype-hidden-input');
+        const customContainer = document.getElementById('custom-doctype-container');
+        
+        if (customContainer.style.display !== 'none' && customInput.value.trim() !== '') {
+            hiddenInput.value = customInput.value.trim();
+        } else if (customContainer.style.display !== 'none' && customInput.value.trim() === '') {
+            alert('Please enter a custom document type or select from the list');
+            event.preventDefault();
+            return;
+        }
+        
         event.preventDefault();
-        this.open = false;
         this.showSuccessUpload = true;
         setTimeout(() => {
             event.target.submit();
         }, 1500);
     }
-}">
+}" x-init="showUploadModal = false; showSuccessUpload = false">
 
     <!-- FLOATING BUTTON -->
     <button
@@ -592,7 +619,7 @@
 
     <!-- MODAL BACKDROP -->
     <div
-        x-show="open"
+        x-show="showUploadModal"
         x-cloak
         x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0"
@@ -600,9 +627,9 @@
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0"
-        @click="open = false"
+        @click="closeModal()"
         class="fixed inset-0 z-[10000] flex items-center justify-center p-4"
-        style="background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);"
+        style="background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); display: none;"
     >
 
         <!-- MODAL CARD -->
@@ -614,20 +641,20 @@
             x-transition:leave="transition ease-in duration-200"
             x-transition:leave-start="opacity-100 scale-100"
             x-transition:leave-end="opacity-0 scale-90"
-            class="bg-white shadow-2xl overflow-y-auto"
-            style="width: 500px; max-height: 90vh; border-radius: 2rem;"
+            class="bg-white shadow-2xl rounded-2xl flex flex-col"
+            style="width: 500px; max-height: 90vh;"
         >
 
-            <!-- HEADER -->
-            <div class="flex items-center justify-between px-2 py-2 border-b bg-gradient-to-r from-gray-50 to-white">
-                <h2 class="text-l font-semibold text-gray-800 mb-0.5 px-4">
+            <!-- HEADER (Fixed) -->
+            <div class="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-gray-50 to-white flex-shrink-0">
+                <h2 class="text-lg font-semibold text-gray-800">
                     Upload New Document
                 </h2>
                 <button
-                    @click="open = false"
+                    @click="closeModal()"
                     type="button"
                     class="w-9 h-9 flex items-center justify-center rounded-full 
-                           hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition duration-200 mb-0.5 px-4"
+                           hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition duration-200"
                 >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -635,15 +662,18 @@
                 </button>
             </div>
 
-            <!-- FORM -->
+            <!-- FORM CONTENT (Scrollable) -->
             <form
+                id="upload-form"
                 action="{{ route('documents.store') }}"
                 method="POST"
                 enctype="multipart/form-data"
-                class="px-6 py-4 space-y-2.5"
+                class="overflow-y-auto flex-1"
                 @submit="submitUpload($event)"
             >
             @csrf
+
+            <div class="px-6 py-4 space-y-2.5">
 
             <!-- Document Number -->
             <div>
@@ -828,7 +858,26 @@
                                 {{ $type->name }}
                             </div>
                         @endforeach
+                        <div
+                            class="doctype-row"
+                            data-value="__others__"
+                            style="padding:0.6rem 1rem; font-size:0.875rem; color:#374151; cursor:pointer; transition:background 0.15s; border-top: 1px solid #e5e7eb; font-weight: 500;"
+                        >
+                            Others
+                        </div>
                     </div>
+                </div>
+
+                <!-- Custom Document Type Input -->
+                <div id="custom-doctype-container" style="display: none; margin-top: 0.75rem;">
+                    <input
+                        type="text"
+                        id="custom-doctype-input"
+                        placeholder="Enter custom document type"
+                        maxlength="100"
+                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 outline-none transition duration-200 hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    >
+                    <p class="text-xs text-gray-500 mt-1">Maximum 100 characters</p>
                 </div>
             </div>
 
@@ -856,13 +905,13 @@
                 <p class="text-xs text-gray-500 mt-1">Accepted: PDF, DOC, DOCX, JPG, PNG (Max: 25MB)</p>
             </div>
 
-            <!-- FOOTER -->
-            <div class="flex justify-end gap-3 pt-4 border-t">
+            <!-- FOOTER (Fixed) -->
+            <div class="flex justify-end gap-3 px-6 py-4 border-t bg-gray-50 flex-shrink-0">
                 <button
                     type="button"
-                    @click="open = false"
+                    @click="closeModal()"
                     class="px-6 py-2.5 rounded-lg border-2 border-gray-300
-                           text-gray-700 hover:bg-gray-50 transition duration-200 
+                           text-gray-700 hover:bg-gray-100 transition duration-200 
                            font-semibold text-sm"
                 >
                     Cancel
@@ -885,16 +934,18 @@
     <!-- SUCCESS UPLOAD MODAL -->
     <div x-show="showSuccessUpload"
          x-cloak
-         class="fixed inset-0 z-50 flex items-center justify-center"
+         class="fixed inset-0 z-[10001] flex items-center justify-center"
          style="background-color: rgba(11, 31, 58, 0.6); backdrop-filter: blur(4px);"
          x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="opacity-0"
-         x-transition:enter-end="opacity-100">
+         x-transition:enter-end="opacity-100"
+         @click="closeModal()">
         <div class="rounded-3xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center"
              style="background-color: white;"
              x-transition:enter="transition ease-out duration-300 delay-75"
              x-transition:enter-start="opacity-0 scale-75"
-             x-transition:enter-end="opacity-100 scale-100">
+             x-transition:enter-end="opacity-100 scale-100"
+             @click.stop>
             <div class="mb-6">
                 <div class="mx-auto w-20 h-20 rounded-full flex items-center justify-center shadow-lg animate-bounce-in"
                      style="background: linear-gradient(to bottom right, #60a5fa, #3b82f6);">
@@ -1003,17 +1054,27 @@
         document.getElementById('doctype-dropdown').style.display = 'none';
     }
 
-    function selectUnit(id, name) {
-        document.getElementById('filter-unit-hidden-input').value = id;
-        const label = document.getElementById('filter-unit-picker-label');
-        label.textContent = name;
-        label.style.color = id ? '#111827' : '#6b7280';
-        document.getElementById('unit-dropdown').style.display = 'none';
-        hideFlyout('pau-flyout');
-        hideFlyout('bgcu-flyout');
-        // Submit the form to apply the filter
-        document.querySelector('[data-live-search-form]').submit();
-    }
+function selectUnit(id, name) {
+    // This is for the UPLOAD MODAL unit picker only
+    document.getElementById('unit-hidden-input').value = id;
+    const label = document.getElementById('unit-picker-label');
+    label.textContent = name;
+    label.style.color = id ? '#111827' : '#6b7280';
+    document.getElementById('unit-dropdown').style.display = 'none';
+    hideFlyout('pau-flyout');
+    hideFlyout('bgcu-flyout');
+}
+
+function selectFilterUnit(id, name) {
+    // This is for the FILTER BAR unit picker only
+    document.getElementById('filter-unit-hidden-input').value = id;
+    const label = document.getElementById('filter-unit-picker-label');
+    label.textContent = name;
+    label.style.color = id ? '#111827' : '#6b7280';
+    document.querySelector('[data-filter-unit-menu]').classList.add('is-hidden');
+    document.querySelector('[data-filter-unit-menu]').classList.remove('is-visible');
+    document.querySelector('[data-live-search-form]').submit();
+}
 
     function hideFlyout(id) {
         clearTimeout(flyoutTimers[id]);
@@ -1033,10 +1094,26 @@
     }
 
     function selectDoctype(value) {
-        document.getElementById('doctype-hidden-input').value = value;
-        const label       = document.getElementById('doctype-picker-label');
-        label.textContent = value;
-        label.style.color = '#111827';
+        const customContainer = document.getElementById('custom-doctype-container');
+        const customInput = document.getElementById('custom-doctype-input');
+        const label = document.getElementById('doctype-picker-label');
+
+        if (value === '__others__') {
+            // Show custom input field
+            customContainer.style.display = 'block';
+            customInput.value = '';
+            customInput.focus();
+            label.textContent = 'Others';
+            label.style.color = '#111827';
+            document.getElementById('doctype-hidden-input').value = '';
+        } else {
+            // Hide custom input field
+            customContainer.style.display = 'none';
+            customInput.value = '';
+            document.getElementById('doctype-hidden-input').value = value;
+            label.textContent = value;
+            label.style.color = '#111827';
+        }
         document.getElementById('doctype-dropdown').style.display = 'none';
     }
 
@@ -1061,10 +1138,10 @@
             flyout.addEventListener('mouseleave', () => hideFlyout(flyout.id));
         });
 
-        // Filter dropdown option click
-        document.querySelectorAll('[data-filter-unit-option]').forEach(option => {
-            option.addEventListener('click', () => selectUnit(option.dataset.unitId, option.dataset.unitName));
-        });
+// Filter dropdown option click
+document.querySelectorAll('[data-filter-unit-option]').forEach(option => {
+    option.addEventListener('click', () => selectFilterUnit(option.dataset.unitId, option.dataset.unitName));
+});
 
         // Unit row hover + click
         document.querySelectorAll('.unit-row').forEach(row => {
@@ -1123,7 +1200,7 @@
         });
 
         // Reset both pickers when modal closes
-        const modalBackdrop = document.querySelector('[x-show="open"]');
+        const modalBackdrop = document.querySelector('[x-show="showUploadModal"]');
         if (modalBackdrop) {
             new MutationObserver(function () {
                 if (modalBackdrop.style.display === 'none') {

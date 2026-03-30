@@ -203,7 +203,7 @@
                                     >
                                 </div>
 
-                                <!-- Notification Icon with Animation -->
+                                <!-- Notification Icon -->
                                 @php
                                     $iconClass = 'fa-file';
                                     $iconColor = 'text-blue-600';
@@ -242,6 +242,12 @@
                                                 $bgColor = 'bg-red-100';
                                                 $ringColor = 'ring-red-500/20';
                                                 break;
+                                            case 'document_resubmitted':
+                                                $iconClass = 'fa-redo';
+                                                $iconColor = 'text-amber-600';
+                                                $bgColor = 'bg-amber-100';
+                                                $ringColor = 'ring-amber-500/20';
+                                                break;
                                         }
                                     }
                                 @endphp
@@ -257,13 +263,14 @@
                                                 @php
                                                     $displayMessage = $notification->data['message'] ?? 'New notification';
                                                     
-                                                    // Modify message to include "by" in the title for specific types
                                                     if ($notification->data['type'] === 'document_received' && isset($notification->data['received_by'])) {
                                                         $displayMessage = 'Your document was received by ' . $notification->data['received_by'];
                                                     } elseif ($notification->data['type'] === 'document_rejected' && isset($notification->data['rejected_by'])) {
                                                         $displayMessage = 'Your document was rejected by ' . $notification->data['rejected_by'];
                                                     } elseif ($notification->data['type'] === 'document_sent' && isset($notification->data['sender_name'])) {
                                                         $displayMessage = 'New document received from ' . $notification->data['sender_unit'];
+                                                    } elseif ($notification->data['type'] === 'document_resubmitted' && isset($notification->data['resubmitted_by'])) {
+                                                        $displayMessage = $notification->data['message'];
                                                     }
                                                 @endphp
                                                 
@@ -290,7 +297,6 @@
                                                 </div>
                                             @endif
                                             
-                                            <!-- Show timestamp information based on notification type -->
                                             @if($notification->data['type'] === 'document_sent' && isset($notification->data['sender_name']))
                                                 <p class="text-xs text-gray-500 mb-1">
                                                     Sent by: <span class="font-semibold text-gray-700">{{ $notification->data['sender_name'] }}</span>
@@ -332,7 +338,6 @@
                                                 </form>
                                             @endif
 
-                                            <!-- Delete Button -->
                                             <button
                                                 type="button"
                                                 @click="openSingleDeleteModal('{{ $notification->id }}')"
@@ -360,7 +365,7 @@
                                         </div>
                                     @endif
                                     
-                                    <!-- Forward Details Card (for document_forwarded type) -->
+                                    <!-- Forward Details Card -->
                                     @if($notification->data['type'] === 'document_forwarded')
                                         <div class="mt-3 p-4 bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200 rounded-xl">
                                             <div class="flex items-start gap-3">
@@ -400,12 +405,51 @@
                                         </div>
                                     @endif
 
+                                    {{-- Resubmit Details Card — amber/yellow theme --}}
+                                    @if($notification->data['type'] === 'document_resubmitted')
+                                        <div class="mt-3 p-4 bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200 rounded-xl">
+                                            <div class="flex items-start gap-3">
+                                                <svg class="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                </svg>
+                                                <div class="flex-1">
+                                                    <p class="text-sm font-semibold text-amber-900 mb-2">Resubmission Details</p>
+                                                    <div class="space-y-1">
+                                                        @if(isset($notification->data['resubmitted_by']))
+                                                            <p class="text-xs text-amber-700">
+                                                                Resubmitted by: <span class="font-semibold">{{ $notification->data['resubmitted_by'] }}</span>
+                                                                @if(isset($notification->data['sender_unit']))
+                                                                    ({{ $notification->data['sender_unit'] }})
+                                                                @endif
+                                                            </p>
+                                                        @endif
+                                                        @if(isset($notification->data['resubmit_attempt']))
+                                                            <p class="text-xs text-amber-700">
+                                                                Attempt: <span class="font-semibold">{{ $notification->data['resubmit_attempt'] }}</span>
+                                                            </p>
+                                                        @endif
+                                                        @if(isset($notification->data['resubmitted_at']))
+                                                            <p class="text-xs text-amber-700">
+                                                                Resubmitted at: <span class="font-semibold">{{ $notification->data['resubmitted_at'] }}</span>
+                                                            </p>
+                                                        @endif
+                                                    </div>
+                                                    @if(isset($notification->data['resubmit_notes']) && $notification->data['resubmit_notes'])
+                                                        <div class="mt-2 pt-2 border-t border-amber-200">
+                                                            <p class="text-sm font-semibold text-amber-900 mb-1">Resubmission Notes</p>
+                                                            <p class="text-sm text-amber-800">{{ $notification->data['resubmit_notes'] }}</p>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+
                                 </div>
                             </div>
                         </div>
                     </div>
                 @empty
-                    <!-- Empty State -->
                     <div class="panel-surface overflow-hidden">
                         <div class="text-center py-20">
                             <div class="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full mb-6">
@@ -458,7 +502,7 @@
                 </div>
             </div>
 
-            <!-- Confirmation Modal -->
+            <!-- Bulk Confirmation Modal -->
             <div
                 x-cloak
                 x-show="showConfirmModal"

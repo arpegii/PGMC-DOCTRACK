@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Document;
 use App\Models\DocumentType;
 use App\Models\Unit;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -29,17 +30,14 @@ class RejectedController extends Controller
 
         if ($request->has('unit_id')) {
             $unitIdInput = $request->input('unit_id');
-            // If empty/null/0, user selected "all units"
             if (empty($unitIdInput) || $unitIdInput === '0' || $unitIdInput === 0) {
                 $selectedUnitId = null;
                 $request->session()->put('unit_filter', 'all');
             } else {
-                // Specific unit selected
                 $selectedUnitId = (int) $unitIdInput;
                 $request->session()->put('unit_filter', $selectedUnitId);
             }
         } else {
-            // No filter in request, check session
             $sessionFilter = $request->session()->get('unit_filter');
             if ($sessionFilter === 'all') {
                 $selectedUnitId = null;
@@ -148,7 +146,7 @@ class RejectedController extends Controller
         }
 
         // Get accessible units for validation
-        $accessibleUnitIds = $user->isAdmin() 
+        $accessibleUnitIds = $user->isAdmin()
             ? Unit::all()->pluck('id')->toArray()
             : Unit::visibleToUser($user)->pluck('id')->toArray();
 
@@ -158,23 +156,27 @@ class RejectedController extends Controller
                 'required',
                 'exists:units,id',
                 function ($attribute, $value, $fail) use ($user, $accessibleUnitIds) {
-                    // Check if receiving unit is in accessible units
+                    // Cast to int — request values arrive as strings but
+                    // pluck('id') returns integers, so strict comparison
+                    // would always fail without this cast.
+                    $value = (int) $value;
+
                     if (!in_array($value, $accessibleUnitIds, true)) {
                         $fail('You cannot send documents to this unit.');
                     }
-                    if (!$user->isAdmin() && $value == Unit::ADMIN_UNIT_ID) {
+                    if (!$user->isAdmin() && $value === (int) Unit::ADMIN_UNIT_ID) {
                         $fail('You cannot send documents to the admin unit.');
                     }
-                    if ($value == $user->unit_id) {
+                    if ($value === (int) $user->unit_id) {
                         $fail('You cannot send a document to your own unit.');
                     }
                 },
             ],
-            'document_type'     => 'required|string|max:255',
-            'resubmit_notes'    => 'nullable|string|max:1000',
-            'file'              => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:25600',
+            'document_type'  => 'required|string|max:255',
+            'resubmit_notes' => 'nullable|string|max:1000',
+            'file'           => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:25600',
         ], [
-            'file.max' => 'The file must not be larger than 25MB.',
+            'file.max'   => 'The file must not be larger than 25MB.',
             'file.mimes' => 'The file must be a PDF, DOC, DOCX, JPG, or PNG.',
         ]);
 
@@ -189,6 +191,7 @@ class RejectedController extends Controller
         // ── Apply new file if provided ────────────────────────────
         $newFilePath = $previousFilePath; // default: keep existing
         $newFileName = $previousFileName;
+
         if ($request->hasFile('file')) {
             try {
                 if ($previousFilePath && Storage::exists($previousFilePath)) {
@@ -197,12 +200,11 @@ class RejectedController extends Controller
             } catch (\Exception $e) {
                 Log::warning('Failed to delete previous document file during resubmit', [
                     'document_id' => $document->id,
-                    'file_path' => $previousFilePath,
-                    'error' => $e->getMessage(),
+                    'file_path'   => $previousFilePath,
+                    'error'       => $e->getMessage(),
                 ]);
-                // Continue with new file even if old deletion failed
             }
-            
+
             $newFilePath = $request->file('file')->store('documents');
             $newFileName = $request->file('file')->getClientOriginalName();
         }
@@ -225,23 +227,60 @@ class RejectedController extends Controller
         $document->save();
 
         // ── Write immutable history row ───────────────────────────
-        \App\Models\DocumentResubmitHistory::create([
-            'document_id'                => $document->id,
-            'attempt'                    => $nextAttempt,
-            'previous_title'             => $previousTitle,
-            'previous_document_type'     => $previousDocumentType,
-            'previous_receiving_unit_id' => $previousReceivingUnitId,
-            'previous_file_path'         => $previousFilePath,
-            'previous_file_name'         => $previousFileName,
-            'new_title'                  => $document->title,
-            'new_document_type'          => $document->document_type,
-            'new_receiving_unit_id'      => $document->receiving_unit_id,
-            'new_file_path'              => $newFilePath,
-            'new_file_name'              => $newFileName,
-            'rejection_reason'           => $previousRejectionReason,
-            'resubmit_notes'             => $request->resubmit_notes,
-            'resubmitted_by'             => $user->id,
-        ]);
+        try {
+            \App\Models\DocumentResubmitHistory::create([
+                'document_id'                => $document->id,
+                'attempt'                    => $nextAttempt,
+                'previous_title'             => $previousTitle,
+                'previous_document_type'     => $previousDocumentType,
+                'previous_receiving_unit_id' => $previousReceivingUnitId,
+                'previous_file_path'         => $previousFilePath,
+                'previous_file_name'         => $previousFileName,
+                'new_title'                  => $document->title,
+                'new_document_type'          => $document->document_type,
+                'new_receiving_unit_id'      => $document->receiving_unit_id,
+                'new_file_path'              => $newFilePath,
+                'new_file_name'              => $newFileName,
+                'rejection_reason'           => $previousRejectionReason,
+                'resubmit_notes'             => $request->resubmit_notes,
+                'resubmitted_by'             => $user->id,
+            ]);
+        } catch (\Exception $e) {
+            // History write failure should not block the resubmit
+            Log::error('Failed to write resubmit history', [
+                'document_id' => $document->id,
+                'error'       => $e->getMessage(),
+            ]);
+        }
+
+        // ── Notify receiver unit users ────────────────────────────
+        try {
+            $document->load(['senderUnit', 'receivingUnit', 'creator']);
+
+            $receivingUnitUsers = User::where('unit_id', $document->receiving_unit_id)
+                ->whereNotNull('email')
+                ->get();
+
+foreach ($receivingUnitUsers as $receivingUser) {
+    try {
+        $receivingUser->notify(new \App\Notifications\DocumentResubmittedNotification(
+            $document,
+            $user
+        ));
+    } catch (\Throwable $e) {
+                    Log::warning('Failed to send resubmit notification', [
+                        'document_id' => $document->id,
+                        'user_id'     => $receivingUser->id,
+                        'error'       => $e->getMessage(),
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Resubmit notification block failed', [
+                'document_id' => $document->id,
+                'error'       => $e->getMessage(),
+            ]);
+        }
 
         return redirect()->route('rejected.index')
             ->with('success', 'Document resubmitted successfully and sent to the receiving unit\'s incoming queue.');

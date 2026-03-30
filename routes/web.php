@@ -97,8 +97,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/documents/{id}/reject', [DocumentController::class, 'reject'])->name('documents.reject');
 
     // Resubmit a rejected document
-    Route::patch('/documents/{id}/resubmit', [RejectedController::class, 'resubmit'])->name('documents.resubmit');
-
+Route::post('/documents/{id}/resubmit', [RejectedController::class, 'resubmit'])->name('documents.resubmit');
     /*
     |--------------------------------------------------------------------------
     | Report Generation Routes

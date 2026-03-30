@@ -127,9 +127,9 @@ class DocumentController extends Controller
                 'exists:units,id',
                 function ($attribute, $value, $fail) use ($user, $accessibleUnitIds) {
                     // Check if receiving unit is in accessible units
-                    if (!in_array($value, $accessibleUnitIds, true)) {
-                        $fail('You cannot send documents to this unit.');
-                    }
+if (!in_array((int) $value, $accessibleUnitIds, true)) {
+    $fail('You cannot send documents to this unit.');
+}
                     if (!$user->isAdmin() && $value == Unit::ADMIN_UNIT_ID) {
                         $fail('You cannot send documents to the admin unit.');
                     }

@@ -79,7 +79,6 @@
                         @click="notificationOpen = !notificationOpen"
                         @click.away="notificationOpen = false"
                         class="relative inline-flex items-center justify-center w-10 h-10 text-slate-600 hover:text-slate-900 rounded-xl border border-transparent hover:border-slate-200 hover:bg-white transition focus:outline-none">
-                        <!-- Bell Icon SVG with Badge positioned OUTSIDE -->
                         <div class="relative">
                             <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                                 <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke-linecap="round" stroke-linejoin="round"/>
@@ -114,92 +113,97 @@
                             </div>
                         </div>
 
-<!-- Notification List -->
-<div class="max-h-96 overflow-y-auto bg-slate-50 modern-scrollbar">
-    @forelse($visibleUnreadNotifications->take(5) as $notification)
-        <div class="block px-5 py-4 bg-white border-b border-slate-100">
-            <div class="flex items-start gap-3">
-                <!-- Notification Icon -->
-                @php
-                    $iconClass = 'fa-file';
-                    $iconColor = 'text-white';
-                    $bgColor = 'bg-blue-500';
-                    
-                    if(isset($notification->data['type'])) {
-                        switch($notification->data['type']) {
-                            case 'document_sent':
-                                $iconClass = 'fa-paper-plane';
-                                $iconColor = 'text-white';
-                                $bgColor = 'bg-blue-500';
-                                break;
-                            case 'document_received':
-                                $iconClass = 'fa-check-circle';
-                                $iconColor = 'text-white';
-                                $bgColor = 'bg-green-500';
-                                break;
-                            case 'document_rejected':
-                                $iconClass = 'fa-times-circle';
-                                $iconColor = 'text-white';
-                                $bgColor = 'bg-red-500';
-                                break;
-                            case 'document_forwarded':
-                                $iconClass = 'fa-share';
-                                $iconColor = 'text-white';
-                                $bgColor = 'bg-purple-500';
-                                break;
-                            case 'document_overdue':
-                                $iconClass = 'fa-exclamation-triangle';
-                                $iconColor = 'text-white';
-                                $bgColor = 'bg-red-500';
-                                break;
-                        }
-                    }
-                @endphp
-                
-                <div class="flex-shrink-0 w-10 h-10 {{ $bgColor }} rounded-full flex items-center justify-center">
-                    <i class="fas {{ $iconClass }} {{ $iconColor }} text-sm"></i>
-                </div>
-                
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-slate-900 leading-snug">
-                        {{ $notification->data['message'] ?? 'New notification' }}
-                    </p>
-                    @if(isset($notification->data['document_number']))
-                        <p class="text-xs text-slate-600 mt-1 font-medium">
-                            {{ $notification->data['document_number'] }}
-                        </p>
-                    @endif
-                    <p class="text-xs text-slate-400 mt-1">
-                        {{ $notification->created_at->diffForHumans() }}
-                    </p>
-                </div>
+                        <!-- Notification List -->
+                        <div class="max-h-96 overflow-y-auto bg-slate-50 modern-scrollbar">
+                            @forelse($visibleUnreadNotifications->take(5) as $notification)
+                                <div class="block px-5 py-4 bg-white border-b border-slate-100">
+                                    <div class="flex items-start gap-3">
+                                        <!-- Notification Icon -->
+                                        @php
+                                            $iconClass = 'fa-file';
+                                            $iconColor = 'text-white';
+                                            $bgColor = 'bg-blue-500';
+                                            
+                                            if(isset($notification->data['type'])) {
+                                                switch($notification->data['type']) {
+                                                    case 'document_sent':
+                                                        $iconClass = 'fa-paper-plane';
+                                                        $iconColor = 'text-white';
+                                                        $bgColor = 'bg-blue-500';
+                                                        break;
+                                                    case 'document_received':
+                                                        $iconClass = 'fa-check-circle';
+                                                        $iconColor = 'text-white';
+                                                        $bgColor = 'bg-green-500';
+                                                        break;
+                                                    case 'document_rejected':
+                                                        $iconClass = 'fa-times-circle';
+                                                        $iconColor = 'text-white';
+                                                        $bgColor = 'bg-red-500';
+                                                        break;
+                                                    case 'document_forwarded':
+                                                        $iconClass = 'fa-share';
+                                                        $iconColor = 'text-white';
+                                                        $bgColor = 'bg-purple-500';
+                                                        break;
+                                                    case 'document_overdue':
+                                                        $iconClass = 'fa-exclamation-triangle';
+                                                        $iconColor = 'text-white';
+                                                        $bgColor = 'bg-red-500';
+                                                        break;
+                                                    case 'document_resubmitted':
+                                                        $iconClass = 'fa-redo';
+                                                        $iconColor = 'text-white';
+                                                        $bgColor = 'bg-amber-500';
+                                                        break;
+                                                }
+                                            }
+                                        @endphp
+                                        
+                                        <div class="flex-shrink-0 w-10 h-10 {{ $bgColor }} rounded-full flex items-center justify-center">
+                                            <i class="fas {{ $iconClass }} {{ $iconColor }} text-sm"></i>
+                                        </div>
+                                        
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-medium text-slate-900 leading-snug">
+                                                {{ $notification->data['message'] ?? 'New notification' }}
+                                            </p>
+                                            @if(isset($notification->data['document_number']))
+                                                <p class="text-xs text-slate-600 mt-1 font-medium">
+                                                    {{ $notification->data['document_number'] }}
+                                                </p>
+                                            @endif
+                                            <p class="text-xs text-slate-400 mt-1">
+                                                {{ $notification->created_at->diffForHumans() }}
+                                            </p>
+                                        </div>
 
-                <form action="{{ route('notifications.read', $notification->id) }}" method="POST" class="flex-shrink-0 self-center">
-                    @csrf
-                    <input type="hidden" name="stay" value="1">
-                    <button
-                        type="submit"
-                        class="inline-flex items-center justify-center w-5 h-5 text-blue-700 border border-blue-500 hover:bg-blue-50 rounded-full transition-all duration-200"
-                        title="Mark as read"
-                    >
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                    </button>
-                </form>
-            </div>
-        </div>
-    @empty
-        <div class="px-5 py-12 text-center bg-white">
-            <div class="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-full mb-3">
-                <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </div>
-            <p class="text-sm text-slate-500 font-medium">No new notifications</p>
-        </div>
-    @endforelse
-</div>
+                                        <form action="{{ route('notifications.read', $notification->id) }}" method="POST" class="flex-shrink-0 self-center">
+                                            @csrf
+                                            <input type="hidden" name="stay" value="1">
+                                            <button
+                                                type="submit"
+                                                class="inline-flex items-center justify-center w-5 h-5 text-blue-700 border border-blue-500 hover:bg-blue-50 rounded-full transition-all duration-200"
+                                                title="Mark as read"
+                                            >
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="px-5 py-12 text-center bg-white">
+                                    <div class="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-full mb-3">
+                                        <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </div>
+                                    <p class="text-sm text-slate-500 font-medium">No new notifications</p>
+                                </div>
+                            @endforelse
+                        </div>
 
                         <!-- Footer -->
                         @if($visibleUnreadNotifications->count() > 0)
@@ -220,7 +224,6 @@
                     <x-slot name="trigger">
                         <button
                             class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-xl text-slate-700 bg-white border border-slate-200 hover:text-slate-900 hover:shadow-sm focus:outline-none transition">
-                            <!-- Profile Picture -->
                             @if (Auth::user()->profile_picture)
                                 <img src="{{ asset('storage/' . Auth::user()->profile_picture) }}" 
                                      alt="{{ Auth::user()->name }}" 
@@ -233,10 +236,8 @@
                                 </div>
                             @endif
                             
-                            <!-- User Name -->
                             <span>{{ Auth::user()->name }}</span>
                             
-                            <!-- Dropdown Arrow -->
                             <svg class="fill-current h-4 w-4 ms-1" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd"
                                       d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
