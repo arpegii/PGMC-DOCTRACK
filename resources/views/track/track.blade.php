@@ -66,7 +66,7 @@
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
         transition: all 0.3s ease;
         position: relative;
-        min-width: 0; /* prevent card from overflowing */
+        min-width: 0;
     }
 
     .timeline-card:hover {
@@ -154,7 +154,7 @@
     /* ── Resubmit changes table ── */
     .resubmit-changes-table {
         width: 100%;
-        table-layout: fixed;         /* forces columns to respect widths */
+        table-layout: fixed;
         border-collapse: collapse;
         font-size: 0.75rem;
         margin-top: 10px;
@@ -180,10 +180,9 @@
         border-bottom: 1px solid #f1f5f9;
         color: #475569;
         vertical-align: top;
-        /* Prevent overflow — break long filenames/UUIDs */
         overflow-wrap: break-word;
         word-break: break-all;
-        max-width: 0; /* required with table-layout:fixed to enable truncation */
+        max-width: 0;
     }
     .resubmit-changes-table tr.changed td:nth-child(2) { color: #dc2626; }
     .resubmit-changes-table tr.changed td:nth-child(3) { color: #16a34a; font-weight: 600; }
@@ -255,7 +254,6 @@
                             <div>
                                 <div class="flex items-center gap-3 mb-1">
                                     <h2 class="text-2xl font-bold text-gray-900">{{ $document->document_number }}</h2>
-                                    {{-- Resubmit count badge --}}
                                     @if(($document->resubmit_count ?? 0) > 0)
                                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
                                               style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;">
@@ -304,8 +302,6 @@
                             @php
                                 $eventIndex = 0;
 
-                                // Build a unified chronological event list so forwards and
-                                // resubmissions interleave correctly regardless of order.
                                 $timelineEvents = collect();
 
                                 // Forward history events
@@ -315,14 +311,33 @@
                                     }
                                 }
 
-                                // Resubmit history events
+                                // Resubmit history — each row generates both a rejection
+                                // event (using rejected_at) and a resubmission event (using created_at)
+                                // so both appear in the timeline in correct chronological order.
                                 if ($document->resubmitHistory) {
                                     foreach ($document->resubmitHistory as $rsub) {
-                                        $timelineEvents->push(['type' => 'resubmit', 'time' => $rsub->created_at, 'data' => $rsub]);
+
+                                        // Rejection event: use stored rejected_at; fall back to 1 second
+                                        // before the resubmission for rows created before the migration.
+                                        $rejectedAt = $rsub->rejected_at ?? $rsub->created_at->clone()->subSecond();
+
+                                        $timelineEvents->push([
+                                            'type' => 'rejection',
+                                            'time' => $rejectedAt,
+                                            'data' => $rsub,
+                                        ]);
+
+                                        // Resubmission event
+                                        $timelineEvents->push([
+                                            'type' => 'resubmit',
+                                            'time' => $rsub->created_at,
+                                            'data' => $rsub,
+                                        ]);
                                     }
                                 }
 
-                                $timelineEvents = $timelineEvents->sortBy('time');
+                                // Sort everything chronologically
+                                $timelineEvents = $timelineEvents->sortBy('time')->values();
 
                                 // Determine "first receiving unit" for the Sent card
                                 if ($document->forwardHistory && $document->forwardHistory->count() > 0) {
@@ -377,37 +392,33 @@
                             </div>
                             @php $eventIndex++; @endphp
 
-                            {{-- ── Interleaved: Forwards + Resubmissions ── --}}
+                            {{-- ── Interleaved: Rejections + Resubmissions + Forwards ── --}}
                             @foreach($timelineEvents as $event)
 
-                                @if($event['type'] === 'forward')
-                                    @php $forward = $event['data']; @endphp
+                                @if($event['type'] === 'rejection')
+                                    @php $rsub = $event['data']; @endphp
                                     <div class="timeline-event {{ $eventIndex % 2 == 0 ? 'left' : 'right' }}">
-                                        <div class="timeline-dot purple"></div>
-                                        <div class="timeline-card border-purple">
+                                        <div class="timeline-dot red"></div>
+                                        <div class="timeline-card border-red">
                                             <div class="card-header">
-                                                <div class="card-icon bg-purple-light">
-                                                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                                                <div class="card-icon bg-red-light">
+                                                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                                     </svg>
                                                 </div>
                                                 <div>
-                                                    <h3 class="card-title text-purple-700">Forwarded</h3>
-                                                    <p class="card-date">{{ $forward->created_at->format('Y-m-d H:i:s') }}</p>
+                                                    <h3 class="card-title text-red-700">Rejected</h3>
+                                                    <p class="card-date">{{ ($rsub->rejected_at ?? $rsub->created_at->clone()->subSecond())->format('Y-m-d H:i:s') }}</p>
                                                 </div>
                                             </div>
                                             <div class="card-details">
-                                                <p><strong>from:</strong> {{ $forward->fromUnit->name ?? '-' }}</p>
-                                                <p><strong>to:</strong> {{ $forward->toUnit->name ?? '-' }}</p>
-                                                @if($forward->forwarded_by_user_id)
-                                                    <p><strong>by:</strong> {{ $forward->forwardedBy->name ?? '-' }}</p>
-                                                @endif
-                                                @if($forward->notes)
-                                                    <p class="mt-2"><strong>Notes:</strong> {{ $forward->notes }}</p>
+                                                @if($rsub->rejection_reason)
+                                                    <p><strong>Reason:</strong> {{ $rsub->rejection_reason }}</p>
                                                 @endif
                                             </div>
                                         </div>
                                     </div>
+                                    @php $eventIndex++; @endphp
 
                                 @elseif($event['type'] === 'resubmit')
                                     @php $rsub = $event['data']; @endphp
@@ -429,21 +440,8 @@
 
                                             <div class="card-details space-y-3">
 
-                                                {{-- Who resubmitted --}}
                                                 <p><strong>by:</strong> {{ $rsub->resubmittedByUser->name ?? '-' }}</p>
 
-                                                {{-- Rejection reason that triggered this --}}
-                                                @if($rsub->rejection_reason)
-                                                    <div class="rounded-lg px-3 py-2"
-                                                         style="background:#fff7f7;border:1px solid #fecaca;text-align:left;">
-                                                        <p class="text-xs font-bold text-red-600 uppercase tracking-wide mb-1">
-                                                            Rejection Reason
-                                                        </p>
-                                                        <p class="text-xs text-red-800 leading-relaxed">{{ $rsub->rejection_reason }}</p>
-                                                    </div>
-                                                @endif
-
-                                                {{-- Sender notes --}}
                                                 @if($rsub->resubmit_notes)
                                                     <div class="rounded-lg px-3 py-2"
                                                          style="background:#f0fdf4;border:1px solid #bbf7d0;text-align:left;">
@@ -452,7 +450,6 @@
                                                     </div>
                                                 @endif
 
-                                                {{-- Field changes table --}}
                                                 @php
                                                     $rows = [
                                                         ['Title',          $rsub->previous_title,         $rsub->new_title],
@@ -502,10 +499,40 @@
                                             </div>
                                         </div>
                                     </div>
+                                    @php $eventIndex++; @endphp
+
+                                @elseif($event['type'] === 'forward')
+                                    @php $forward = $event['data']; @endphp
+                                    <div class="timeline-event {{ $eventIndex % 2 == 0 ? 'left' : 'right' }}">
+                                        <div class="timeline-dot purple"></div>
+                                        <div class="timeline-card border-purple">
+                                            <div class="card-header">
+                                                <div class="card-icon bg-purple-light">
+                                                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h3 class="card-title text-purple-700">Forwarded</h3>
+                                                    <p class="card-date">{{ $forward->created_at->format('Y-m-d H:i:s') }}</p>
+                                                </div>
+                                            </div>
+                                            <div class="card-details">
+                                                <p><strong>from:</strong> {{ $forward->fromUnit->name ?? '-' }}</p>
+                                                <p><strong>to:</strong> {{ $forward->toUnit->name ?? '-' }}</p>
+                                                @if($forward->forwarded_by_user_id)
+                                                    <p><strong>by:</strong> {{ $forward->forwardedBy->name ?? '-' }}</p>
+                                                @endif
+                                                @if($forward->notes)
+                                                    <p class="mt-2"><strong>Notes:</strong> {{ $forward->notes }}</p>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @php $eventIndex++; @endphp
 
                                 @endif
 
-                                @php $eventIndex++; @endphp
                             @endforeach
 
                             {{-- ── Final Status Event ── --}}

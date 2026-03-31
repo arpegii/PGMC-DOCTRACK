@@ -25,11 +25,13 @@ class DocumentResubmitHistory extends Model
         'rejection_reason',
         'resubmit_notes',
         'resubmitted_by',
+        'rejected_at',
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'rejected_at' => 'datetime',
     ];
 
     // ── Relationships ────────────────────────────────────────────

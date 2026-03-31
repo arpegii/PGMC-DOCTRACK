@@ -115,7 +115,7 @@ class DocumentController extends Controller
         }
 
         // Get accessible units for validation
-        $accessibleUnitIds = $user->isAdmin() 
+        $accessibleUnitIds = $user->isAdmin()
             ? Unit::all()->pluck('id')->toArray()
             : Unit::visibleToUser($user)->pluck('id')->toArray();
 
@@ -126,10 +126,9 @@ class DocumentController extends Controller
                 'required',
                 'exists:units,id',
                 function ($attribute, $value, $fail) use ($user, $accessibleUnitIds) {
-                    // Check if receiving unit is in accessible units
-if (!in_array((int) $value, $accessibleUnitIds, true)) {
-    $fail('You cannot send documents to this unit.');
-}
+                    if (!in_array((int) $value, $accessibleUnitIds, true)) {
+                        $fail('You cannot send documents to this unit.');
+                    }
                     if (!$user->isAdmin() && $value == Unit::ADMIN_UNIT_ID) {
                         $fail('You cannot send documents to the admin unit.');
                     }
@@ -245,6 +244,11 @@ if (!in_array((int) $value, $accessibleUnitIds, true)) {
 
     /**
      * Mark document as rejected
+     *
+     * NOTE: 'rejected_at' => now() is stored on the document so that when
+     * the sender resubmits, the exact rejection timestamp is copied into
+     * document_resubmit_history.rejected_at, allowing the tracking timeline
+     * to display the rejection event in correct chronological order.
      */
     public function reject(Request $request, int $id)
     {
@@ -272,9 +276,9 @@ if (!in_array((int) $value, $accessibleUnitIds, true)) {
             $rejectionReason = $request->input('rejection_reason');
 
             $document->update([
-                'status' => 'rejected',
-                'rejected_at' => now(),
-                'rejected_by' => $user->id,
+                'status'           => 'rejected',
+                'rejected_at'      => now(),
+                'rejected_by'      => $user->id,
                 'rejection_reason' => $rejectionReason,
             ]);
 
@@ -290,8 +294,8 @@ if (!in_array((int) $value, $accessibleUnitIds, true)) {
                 } catch (\Throwable $e) {
                     Log::warning('Failed to send document rejected notification', [
                         'document_id' => $document->id,
-                        'user_id' => $document->created_by,
-                        'error' => $e->getMessage(),
+                        'user_id'     => $document->created_by,
+                        'error'       => $e->getMessage(),
                     ]);
                 }
             }
@@ -301,8 +305,8 @@ if (!in_array((int) $value, $accessibleUnitIds, true)) {
             DB::rollBack();
             Log::error('Error rejecting document: ' . $e->getMessage(), [
                 'document_id' => $id,
-                'user_id' => $user->id,
-                'trace' => $e->getTraceAsString()
+                'user_id'     => $user->id,
+                'trace'       => $e->getTraceAsString()
             ]);
             return back()->with('error', 'Failed to reject document. Please try again.');
         }
@@ -340,18 +344,18 @@ if (!in_array((int) $value, $accessibleUnitIds, true)) {
             DB::beginTransaction();
 
             $forwardHistory = DocumentForwardHistory::create([
-                'document_id' => $document->id,
-                'from_unit_id' => $document->receiving_unit_id,
-                'to_unit_id' => $request->forward_to_unit_id,
-                'forwarded_by_user_id' => $user->id,
-                'notes' => $request->notes,
+                'document_id'         => $document->id,
+                'from_unit_id'        => $document->receiving_unit_id,
+                'to_unit_id'          => $request->forward_to_unit_id,
+                'forwarded_by_user_id'=> $user->id,
+                'notes'               => $request->notes,
             ]);
 
             $document->update([
                 'receiving_unit_id' => $request->forward_to_unit_id,
-                'status' => 'incoming',
-                'forwarded_by' => $user->id,
-                'forwarded_at' => now(),
+                'status'            => 'incoming',
+                'forwarded_by'      => $user->id,
+                'forwarded_at'      => now(),
             ]);
 
             // Load relationships before sending notifications
@@ -370,9 +374,9 @@ if (!in_array((int) $value, $accessibleUnitIds, true)) {
                     $receivingUser->notify(new DocumentForwardedNotification($document, $forwardHistory));
                 } catch (\Throwable $notifyException) {
                     Log::warning('Failed to send forwarded notification', [
-                        'document_id' => $document->id,
+                        'document_id'       => $document->id,
                         'receiving_user_id' => $receivingUser->id,
-                        'error' => $notifyException->getMessage(),
+                        'error'             => $notifyException->getMessage(),
                     ]);
                 }
             }
@@ -384,8 +388,8 @@ if (!in_array((int) $value, $accessibleUnitIds, true)) {
 
             Log::error('Error forwarding document: ' . $e->getMessage(), [
                 'document_id' => $id,
-                'user_id' => $user->id,
-                'trace' => $e->getTraceAsString()
+                'user_id'     => $user->id,
+                'trace'       => $e->getTraceAsString()
             ]);
 
             return back()->with('error', 'Failed to forward document. Please try again.');
@@ -410,14 +414,14 @@ if (!in_array((int) $value, $accessibleUnitIds, true)) {
             'forwardHistory.fromUnit',
             'forwardHistory.toUnit',
             'forwardHistory.forwardedBy',
-            'lastResubmittedByUser',  // ← added for resubmit notes display
+            'lastResubmittedByUser',
         ])->findOrFail($id);
 
         if (!$user->isAdmin()) {
             $hasAccess = $document->sender_unit_id === $user->unit_id
                       || $document->receiving_unit_id === $user->unit_id
                       || $document->forwardHistory->contains(function ($history) use ($user) {
-                            return $history->from_unit_id === $user->unit_id 
+                            return $history->from_unit_id === $user->unit_id
                                 || $history->to_unit_id === $user->unit_id;
                          });
 
@@ -444,7 +448,7 @@ if (!in_array((int) $value, $accessibleUnitIds, true)) {
             $hasAccess = $document->sender_unit_id === $user->unit_id
                       || $document->receiving_unit_id === $user->unit_id
                       || $document->forwardHistory->contains(function ($history) use ($user) {
-                            return $history->from_unit_id === $user->unit_id 
+                            return $history->from_unit_id === $user->unit_id
                                 || $history->to_unit_id === $user->unit_id;
                          });
 
@@ -477,23 +481,18 @@ if (!in_array((int) $value, $accessibleUnitIds, true)) {
             $perPage = 10;
         }
         $selectedUnitId = null;
-        // Make filter units available to all users
         $filterUnits = $user->isAdmin() ? Unit::all() : Unit::visibleToUser($user);
 
-        // Handle unit filtering - persist selection across pages
         if ($request->has('unit_id')) {
             $unitIdInput = $request->input('unit_id');
-            // If empty/0, user selected "all units"
             if ($unitIdInput === '' || $unitIdInput === '0' || $unitIdInput === 0) {
                 $selectedUnitId = null;
                 $request->session()->put('unit_filter', 'all');
             } else {
-                // Specific unit selected
                 $selectedUnitId = (int) $unitIdInput;
                 $request->session()->put('unit_filter', $selectedUnitId);
             }
         } else {
-            // No filter in request, check session
             $sessionFilter = $request->session()->get('unit_filter');
             if ($sessionFilter === 'all') {
                 $selectedUnitId = null;
@@ -515,14 +514,11 @@ if (!in_array((int) $value, $accessibleUnitIds, true)) {
             if (!$user->isAdmin()) {
                 $query->where('sender_unit_id', $user->unit_id);
             }
-
-            // "Forwarded" is represented by having forwarding activity.
             $query->whereNotNull('forwarded_at');
         });
 
         if ($selectedUnitId) {
             if ($user->isAdmin()) {
-                // For admins, filter by unit in document or forwarding history
                 $forwardHistoriesQuery->where(function ($query) use ($selectedUnitId) {
                     $query->whereHas('document', function ($docQuery) use ($selectedUnitId) {
                         $docQuery->where('sender_unit_id', $selectedUnitId)
@@ -531,7 +527,6 @@ if (!in_array((int) $value, $accessibleUnitIds, true)) {
                       ->orWhere('to_unit_id', $selectedUnitId);
                 });
             } else {
-                // For non-admins, filter by unit in forwarding history (from/to units)
                 $forwardHistoriesQuery->where(function ($query) use ($selectedUnitId) {
                     $query->where('from_unit_id', $selectedUnitId)
                           ->orWhere('to_unit_id', $selectedUnitId);

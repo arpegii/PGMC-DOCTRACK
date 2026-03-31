@@ -13,7 +13,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             UnitsTableSeeder::class,  // This will create all units including Admin Office
-            // ... your other seeders
+            DocumentTypeSeeder::class, // This will create all document types
         ]);
     }
 }

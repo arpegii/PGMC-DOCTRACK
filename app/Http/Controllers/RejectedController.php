@@ -156,9 +156,6 @@ class RejectedController extends Controller
                 'required',
                 'exists:units,id',
                 function ($attribute, $value, $fail) use ($user, $accessibleUnitIds) {
-                    // Cast to int — request values arrive as strings but
-                    // pluck('id') returns integers, so strict comparison
-                    // would always fail without this cast.
                     $value = (int) $value;
 
                     if (!in_array($value, $accessibleUnitIds, true)) {
@@ -188,8 +185,13 @@ class RejectedController extends Controller
         $previousFileName        = $document->file_name;
         $previousRejectionReason = $document->rejection_reason;
 
+        // Capture the rejection timestamp BEFORE we clear it on the document.
+        // This is used to correctly sort the rejection event in the timeline,
+        // placing it before the resubmission event chronologically.
+        $rejectedAt = $document->rejected_at ?? now();
+
         // ── Apply new file if provided ────────────────────────────
-        $newFilePath = $previousFilePath; // default: keep existing
+        $newFilePath = $previousFilePath;
         $newFileName = $previousFileName;
 
         if ($request->hasFile('file')) {
@@ -221,8 +223,10 @@ class RejectedController extends Controller
         $document->resubmit_count      = $nextAttempt;
         $document->last_resubmitted_at = now();
         $document->last_resubmitted_by = $user->id;
-        $document->status              = 'incoming'; // lands in receiving unit's incoming queue
-        $document->rejection_reason    = null;        // clear previous rejection
+        $document->status              = 'incoming';
+        $document->rejection_reason    = null;
+        $document->rejected_at         = null; // clear so it doesn't show as still rejected
+        $document->rejected_by         = null;
 
         $document->save();
 
@@ -242,11 +246,11 @@ class RejectedController extends Controller
                 'new_file_path'              => $newFilePath,
                 'new_file_name'              => $newFileName,
                 'rejection_reason'           => $previousRejectionReason,
+                'rejected_at'                => $rejectedAt, // ← new: exact rejection timestamp
                 'resubmit_notes'             => $request->resubmit_notes,
                 'resubmitted_by'             => $user->id,
             ]);
         } catch (\Exception $e) {
-            // History write failure should not block the resubmit
             Log::error('Failed to write resubmit history', [
                 'document_id' => $document->id,
                 'error'       => $e->getMessage(),
@@ -261,13 +265,13 @@ class RejectedController extends Controller
                 ->whereNotNull('email')
                 ->get();
 
-foreach ($receivingUnitUsers as $receivingUser) {
-    try {
-        $receivingUser->notify(new \App\Notifications\DocumentResubmittedNotification(
-            $document,
-            $user
-        ));
-    } catch (\Throwable $e) {
+            foreach ($receivingUnitUsers as $receivingUser) {
+                try {
+                    $receivingUser->notify(new \App\Notifications\DocumentResubmittedNotification(
+                        $document,
+                        $user
+                    ));
+                } catch (\Throwable $e) {
                     Log::warning('Failed to send resubmit notification', [
                         'document_id' => $document->id,
                         'user_id'     => $receivingUser->id,

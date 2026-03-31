@@ -593,6 +593,12 @@
                         typeLabel.style.color = '#6b7280';
                     }
                 }
+
+                // Always reset the custom doctype field when opening
+                const customContainer = document.getElementById('resubmit-custom-doctype-container');
+                const customInput = document.getElementById('resubmit-custom-doctype-input');
+                if (customContainer) customContainer.style.display = 'none';
+                if (customInput) customInput.value = '';
             });
         },
         resubmitUrl() {
@@ -600,8 +606,20 @@
         },
         submitResubmit(event) {
             event.preventDefault();
-            const unitInput = document.getElementById('resubmit-unit-hidden-input');
-            const typeInput = document.getElementById('resubmit-doctype-hidden-input');
+            const unitInput       = document.getElementById('resubmit-unit-hidden-input');
+            const typeInput       = document.getElementById('resubmit-doctype-hidden-input');
+            const customContainer = document.getElementById('resubmit-custom-doctype-container');
+            const customInput     = document.getElementById('resubmit-custom-doctype-input');
+
+            // If Others is selected, validate and copy custom text into the hidden input
+            if (customContainer && customContainer.style.display !== 'none') {
+                if (!customInput || customInput.value.trim() === '') {
+                    alert('Please enter a custom document type or select from the list.');
+                    return;
+                }
+                typeInput.value = customInput.value.trim();
+            }
+
             if (!unitInput || !unitInput.value || !typeInput || !typeInput.value) {
                 alert('Please select both Receiving Unit and Document Type.');
                 return;
@@ -715,7 +733,6 @@
                 @submit="submitResubmit($event)"
             >
                 @csrf
-                
 
                 {{-- Document Title --}}
                 <div>
@@ -793,7 +810,14 @@
                                 @foreach($documentTypes as $type)
                                     <div class="resubmit-doctype-row" data-value="{{ $type->name }}" style="padding:0.6rem 1rem;font-size:0.875rem;color:#374151;cursor:pointer;transition:background 0.15s;">{{ $type->name }}</div>
                                 @endforeach
+                                {{-- Others option — mirrors the upload modal --}}
+                                <div class="resubmit-doctype-row" data-value="__others__" style="padding:0.6rem 1rem;font-size:0.875rem;color:#374151;cursor:pointer;transition:background 0.15s;border-top:1px solid #e5e7eb;font-weight:500;">Others</div>
                             </div>
+                        </div>
+                        {{-- Custom Document Type Input (shown when Others is selected) --}}
+                        <div id="resubmit-custom-doctype-container" style="display:none; margin-top:0.75rem;">
+                            <input type="text" id="resubmit-custom-doctype-input" placeholder="Enter custom document type" maxlength="100" class="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition duration-200 hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                            <p class="text-xs text-gray-500 mt-1">Maximum 100 characters</p>
                         </div>
                     </div>
                 </div>
@@ -1027,7 +1051,6 @@
 
     /* ── Rejection reason tooltip (body-appended, fixed position) ── */
     (function () {
-        // Build the single shared tooltip element once
         const popup = document.createElement('div');
         popup.id = 'rejection-tooltip-popup';
         popup.innerHTML = `
@@ -1049,18 +1072,15 @@
             const reason = btn.dataset.rejection || '';
             popup.querySelector('.rtp-body').textContent = reason;
 
-            // Position: centred below the button
             const rect   = btn.getBoundingClientRect();
             const tipW   = 260;
             let   left   = rect.left + rect.width / 2 - tipW / 2;
             const top    = rect.bottom + 10;
 
-            // Keep inside viewport horizontally
             const margin = 8;
             if (left < margin) left = margin;
             if (left + tipW > window.innerWidth - margin) left = window.innerWidth - tipW - margin;
 
-            // Reposition arrow to always point at the button
             const arrowLeft = (rect.left + rect.width / 2) - left;
             popup.querySelector('.rtp-arrow').style.left = Math.max(12, Math.min(tipW - 12, arrowLeft)) + 'px';
             popup.querySelector('.rtp-arrow').style.transform = 'translateX(-50%)';
@@ -1084,11 +1104,6 @@
         });
     })();
 
-    /**
-     * Called by the plain onclick on each Resubmit button.
-     * Fires a native window CustomEvent that the Alpine resubmit
-     * component listens for via @open-resubmit.window.
-     */
     function openResubmitModal(detail) {
         window.dispatchEvent(new CustomEvent('open-resubmit', { detail }));
     }
@@ -1111,27 +1126,25 @@
         document.getElementById('resubmit-doctype-dropdown').style.display = 'none';
     }
 
-function selectUnit(id, name) {
-    // This is for the UPLOAD MODAL unit picker only
-    document.getElementById('unit-hidden-input').value = id;
-    const label = document.getElementById('unit-picker-label');
-    label.textContent = name;
-    label.style.color = id ? '#111827' : '#6b7280';
-    document.getElementById('unit-dropdown').style.display = 'none';
-    hideFlyout('pau-flyout');
-    hideFlyout('bgcu-flyout');
-}
+    function selectUnit(id, name) {
+        document.getElementById('unit-hidden-input').value = id;
+        const label = document.getElementById('unit-picker-label');
+        label.textContent = name;
+        label.style.color = id ? '#111827' : '#6b7280';
+        document.getElementById('unit-dropdown').style.display = 'none';
+        hideFlyout('pau-flyout');
+        hideFlyout('bgcu-flyout');
+    }
 
-function selectFilterUnit(id, name) {
-    // This is for the FILTER BAR unit picker only
-    document.getElementById('filter-unit-hidden-input').value = id;
-    const label = document.getElementById('filter-unit-picker-label');
-    label.textContent = name;
-    label.style.color = id ? '#111827' : '#6b7280';
-    document.querySelector('[data-filter-unit-menu]').classList.add('is-hidden');
-    document.querySelector('[data-filter-unit-menu]').classList.remove('is-visible');
-    document.querySelector('[data-live-search-form]').submit();
-}
+    function selectFilterUnit(id, name) {
+        document.getElementById('filter-unit-hidden-input').value = id;
+        const label = document.getElementById('filter-unit-picker-label');
+        label.textContent = name;
+        label.style.color = id ? '#111827' : '#6b7280';
+        document.querySelector('[data-filter-unit-menu]').classList.add('is-hidden');
+        document.querySelector('[data-filter-unit-menu]').classList.remove('is-visible');
+        document.querySelector('[data-live-search-form]').submit();
+    }
 
     function selectResubmitUnit(id, name) {
         document.getElementById('resubmit-unit-hidden-input').value = id;
@@ -1169,33 +1182,47 @@ function selectFilterUnit(id, name) {
         hideFlyout('bgcu-flyout');
     }
 
-function selectDoctype(value) {
-    const customContainer = document.getElementById('custom-doctype-container');
-    const customInput = document.getElementById('custom-doctype-input');
-    const label = document.getElementById('doctype-picker-label');
+    function selectDoctype(value) {
+        const customContainer = document.getElementById('custom-doctype-container');
+        const customInput     = document.getElementById('custom-doctype-input');
+        const label           = document.getElementById('doctype-picker-label');
 
-    if (value === '__others__') {
-        customContainer.style.display = 'block';
-        customInput.value = '';
-        customInput.focus();
-        label.textContent = 'Others';
-        label.style.color = '#111827';
-        document.getElementById('doctype-hidden-input').value = '';
-    } else {
-        customContainer.style.display = 'none';
-        customInput.value = '';
-        document.getElementById('doctype-hidden-input').value = value;
-        label.textContent = value;
-        label.style.color = '#111827';
+        if (value === '__others__') {
+            customContainer.style.display = 'block';
+            customInput.value = '';
+            customInput.focus();
+            label.textContent = 'Others';
+            label.style.color = '#111827';
+            document.getElementById('doctype-hidden-input').value = '';
+        } else {
+            customContainer.style.display = 'none';
+            customInput.value = '';
+            document.getElementById('doctype-hidden-input').value = value;
+            label.textContent = value;
+            label.style.color = '#111827';
+        }
+        document.getElementById('doctype-dropdown').style.display = 'none';
     }
-    document.getElementById('doctype-dropdown').style.display = 'none';
-}
 
     function selectResubmitDoctype(value) {
-        document.getElementById('resubmit-doctype-hidden-input').value = value;
-        const label = document.getElementById('resubmit-doctype-picker-label');
-        label.textContent = value;
-        label.style.color = '#111827';
+        const customContainer = document.getElementById('resubmit-custom-doctype-container');
+        const customInput     = document.getElementById('resubmit-custom-doctype-input');
+        const label           = document.getElementById('resubmit-doctype-picker-label');
+
+        if (value === '__others__') {
+            customContainer.style.display = 'block';
+            customInput.value = '';
+            customInput.focus();
+            label.textContent = 'Others';
+            label.style.color = '#111827';
+            document.getElementById('resubmit-doctype-hidden-input').value = '';
+        } else {
+            customContainer.style.display = 'none';
+            customInput.value = '';
+            document.getElementById('resubmit-doctype-hidden-input').value = value;
+            label.textContent = value;
+            label.style.color = '#111827';
+        }
         document.getElementById('resubmit-doctype-dropdown').style.display = 'none';
     }
 
@@ -1223,10 +1250,10 @@ function selectDoctype(value) {
             flyout.addEventListener('mouseleave', () => hideFlyout(flyout.id));
         });
 
-// Filter dropdown option click
-document.querySelectorAll('[data-filter-unit-option]').forEach(option => {
-    option.addEventListener('click', () => selectFilterUnit(option.dataset.unitId, option.dataset.unitName));
-});
+        // Filter dropdown option click
+        document.querySelectorAll('[data-filter-unit-option]').forEach(option => {
+            option.addEventListener('click', () => selectFilterUnit(option.dataset.unitId, option.dataset.unitName));
+        });
 
         document.querySelectorAll('.unit-row').forEach(row => {
             row.addEventListener('mouseenter', () => {
@@ -1297,8 +1324,8 @@ document.querySelectorAll('[data-filter-unit-option]').forEach(option => {
         });
 
         document.addEventListener('click', function (e) {
-            const unitPicker    = document.getElementById('unit-picker');
-            const doctypePicker = document.getElementById('doctype-picker');
+            const unitPicker            = document.getElementById('unit-picker');
+            const doctypePicker         = document.getElementById('doctype-picker');
             const resubmitUnitPicker    = document.getElementById('resubmit-unit-picker');
             const resubmitDoctypePicker = document.getElementById('resubmit-doctype-picker');
             if (unitPicker && !unitPicker.contains(e.target) &&
@@ -1362,6 +1389,12 @@ document.querySelectorAll('[data-filter-unit-option]').forEach(option => {
                     doctypeLabel.textContent = 'Select document type';
                     doctypeLabel.style.color = '#6b7280';
                     document.getElementById('resubmit-doctype-dropdown').style.display = 'none';
+
+                    // Reset custom doctype field on close
+                    const customContainer = document.getElementById('resubmit-custom-doctype-container');
+                    const customInput     = document.getElementById('resubmit-custom-doctype-input');
+                    if (customContainer) customContainer.style.display = 'none';
+                    if (customInput) customInput.value = '';
                 }
             }).observe(resubmitBackdrop, { attributes: true, attributeFilter: ['style'] });
         }
