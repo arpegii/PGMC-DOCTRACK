@@ -139,12 +139,10 @@ The AFPPGMC Document Tracking System is a centralized platform for:
 
 ### Administrator
 
-- Full system access to all documents
-- Manage user accounts and units
-- View all reports
-- Configure system settings
-- Access admin features
-- **Restrictions:** None; complete control
+- View all document transactions across units
+- Monitor documents that were sent, received, rejected, forwarded, and are incoming
+- Access cross-unit reporting and audit visibility
+- **Restrictions:** Cannot manually create new users; admin access is focused on transaction monitoring
 
 ### How to Know Your Role
 
@@ -486,19 +484,18 @@ Not directly. You must:
 
 **As an administrator, you have access to:**
 
-1. **User Management** - Create and manage user accounts
-2. **Unit Management** - Configure departments/units
-3. **Document Type Management** - Define document categories
-4. **Reports & Analytics** - Generate usage reports
-5. **System Settings** - Configure system preferences
+1. **Transaction Monitoring** - View document activity across all units
+2. **Sent Documents** - See documents sent by each unit
+3. **Received Documents** - See documents received and processed by each unit
+4. **Rejected and Forwarded Documents** - Review rejected items and forwarding history
+5. **Incoming Documents** - Monitor documents currently waiting for action
 
-### Creating a New User (Admin)
+### Admin Access Scope
 
-1. Go to **Admin Panel** → **Users**
-2. Click **"Create New User"**
-3. Enter user information
-4. Click **"Create"**
-5. New user receives email with login instructions
+The administrator account is intended for **visibility and monitoring only**.
+Admins **cannot manually create new users** from the system.
+Admins can review cross-unit document movement and transaction history.
+Admins can use the dashboard to monitor workflow status across all units.
 
 ---
 
