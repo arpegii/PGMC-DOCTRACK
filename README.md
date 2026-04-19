@@ -2,8 +2,8 @@
 
 A comprehensive web-based document tracking and management system designed for the AFPPGMC (Armed Forces Pension Payment and Gratuity Management Center) to efficiently manage document workflows between departments and units.
 
-**Version:** 2.0  
-**Last Updated:** March 30, 2026  
+**Version:** 2.1  
+**Last Updated:** April 19, 2026  
 **Built with:** Laravel 11, Tailwind CSS, Alpine.js
 
 ---
@@ -68,10 +68,17 @@ The AFPPGMC Document Tracking System is a centralized platform for:
 
 ### User Management
 
+- ✅ **Username-based authentication** (secure username login)
 - ✅ Role-based access control (Admin, Standard Users)
 - ✅ Unit-based authorization (department segregation)
-- ✅ Email verification for new accounts
-- ✅ Email change verification process
+- ✅ Editable usernames in profile settings
+
+### Notifications
+
+- ✅ In-system notifications for document events
+- ✅ Real-time notification bell in navigation
+- ✅ Notifications for: Document Sent, Received, Rejected, Forwarded, Resubmitted
+- ✅ Notification history accessible from profile
 
 ### Reporting & Analytics
 
@@ -103,7 +110,7 @@ The AFPPGMC Document Tracking System is a centralized platform for:
 2. **You'll be redirected to the login page**
 
 3. **Enter your credentials:**
-    - Email: Your registered email address
+    - Username: Your username (lowercase letters, numbers, and underscores)
     - Password: Your password
 
 4. **Click "Login"**
@@ -114,6 +121,19 @@ The AFPPGMC Document Tracking System is a centralized platform for:
 - Check your email inbox for a verification link
 - Click the link to verify your account
 - Return to the login page and try again
+
+### Updating Your Username
+
+1. After login, click your **profile icon** (top right)
+2. Click **"Profile Settings"**
+3. In the "Profile Information" section, update your **Username**
+4. Username must contain:
+    - Only lowercase letters (a-z)
+    - Numbers (0-9)
+    - Underscores (\_)
+    - Example: `john_doe_123`
+5. Click **"Save"**
+6. ✅ Username updated successfully!
 
 ### Password Reset
 
@@ -509,7 +529,7 @@ Admins can use the dashboard to monitor workflow status across all units.
 - Log out when done
 - Verify document recipients before sending
 - Check rejection reasons carefully
-- Keep your email address current
+- Keep your email address current (used for system notifications)
 - Report suspicious activity to admin
 
 ❌ **DON'T:**
@@ -518,3 +538,64 @@ Admins can use the dashboard to monitor workflow status across all units.
 - Leave browser open on public computers
 - Click untrusted links in emails
 - Bypass authentication controls
+- Share your username with others
+
+---
+
+## 📝 Changelog
+
+### Version 2.1 (April 19, 2026)
+
+**Major Changes:**
+
+#### Authentication System
+
+- ✅ **Username-based login** implemented (replaces email-based authentication)
+- ✅ Username validation: lowercase letters, numbers, underscores only
+- ✅ All existing users auto-assigned usernames based on email prefix and ID
+- ✅ Login page updated to accept username instead of email
+- ✅ More secure and user-friendly authentication method
+
+#### User Profile Updates
+
+- ✅ **Profile settings now show username** instead of email
+- ✅ Users can **edit their username** from Profile Settings
+- ✅ Username uniqueness enforced across system
+- ✅ Username is the primary required authentication field
+- ✅ Email field is optional (users can provide if needed)
+
+#### Notifications System
+
+- ✅ **In-system notification display** fully functional
+- ✅ Notification bell in navigation shows unread count
+- ✅ Notifications appear for all document lifecycle events:
+    - Document Sent (when you send a document)
+    - Document Received (when receiving unit marks as received)
+    - Document Rejected (when document is rejected)
+    - Document Forwarded (when document is forwarded)
+    - Document Resubmitted (when resubmitted after rejection)
+- ✅ Click notification bell to view recent notifications
+- ✅ Mark notifications as read individually or all at once
+- ✅ Notifications persist in database for history
+
+#### Database Migrations
+
+- ✅ `add_username_to_users_table` migration created
+- ✅ All existing users populated with usernames
+- ✅ Username column set as UNIQUE indexed for performance
+- ✅ No data loss; existing user accounts fully preserved
+
+#### Bug Fixes
+
+- ✅ Fixed notification sending that was previously commented out
+- ✅ Removed unnecessary email verification checks for in-system notifications
+- ✅ Queue connection optimized to 'sync' for immediate processing
+- ✅ Removed undefined variable errors in views
+
+### Version 2.0 (March 30, 2026)
+
+- Initial release of document tracking system
+- Basic CRUD operations for documents
+- Multi-unit document workflows
+- Email notifications (basic)
+- Report generation

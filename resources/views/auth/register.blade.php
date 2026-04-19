@@ -349,7 +349,7 @@
                                 autofocus
                                 autocomplete="name"
                                 class="input-field"
-                                placeholder="John Doe"
+                                placeholder="Enter Full name"
                             >
                             @error('name')
                                 <div class="error-message">
@@ -376,7 +376,7 @@
                                 required
                                 autocomplete="username"
                                 class="input-field"
-                                placeholder="johndoe"
+                                placeholder="Enter Username"
                             >
                             <small style="font-size: 0.75rem; color: var(--color-text-muted); display: block; margin-top: 0.375rem;">
                                 Lowercase letters, numbers, and underscores only

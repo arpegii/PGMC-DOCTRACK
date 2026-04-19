@@ -56,13 +56,10 @@ class RegisteredUserController extends Controller
             'username.regex' => 'Username can only contain lowercase letters, numbers, and underscores.',
         ]);
 
-        // Generate email if not provided (using username + placeholder domain)
-        $email = $request->email ?? $request->username . '@local.pgmc.gov';
-
         $user = User::create([
             'name' => $request->name,
             'username' => $request->username,
-            'email' => $email,
+            'email' => $request->email,
             'password' => Hash::make($request->password),
             'unit_id' => $request->unit_id,
             'is_admin' => false, // Always set to false for registration
