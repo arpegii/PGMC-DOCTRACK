@@ -18,9 +18,15 @@ class EmailChangeVerification extends Notification
 
     public function via($notifiable): array
     {
-        return ['mail'];
+        // [COMMENTED OUT - EMAIL FUNCTION DISABLED] - Disabled email channel for LAN-only system
+        // return ['mail'];
+        return [];
     }
 
+    /**
+     * [COMMENTED OUT - EMAIL FUNCTION DISABLED] - Email notifications disabled for LAN-only system
+     */
+    /*
     public function toMail($notifiable): MailMessage
     {
         $verificationUrl = route('email-change.verify', [
@@ -39,4 +45,5 @@ class EmailChangeVerification extends Notification
                 'verificationUrl' => $verificationUrl,
             ]);
     }
+    */
 }

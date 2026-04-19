@@ -60,13 +60,9 @@ Route::middleware('auth')->group(function () {
 // ============================================================================
 // EMAIL VERIFICATION ROUTE
 // ============================================================================
-// When user clicks verify button in email:
-// 1. Finds the user by ID
-// 2. Validates the verification hash
-// 3. Marks email as verified in database
-// 4. LOGS OUT the user (if they're logged in)
-// 5. Redirects to login page with success message
+// [COMMENTED OUT - EMAIL VERIFICATION DISABLED] - Email verification not needed for LAN-only system
 // ============================================================================
+/*
 Route::get('verify-email/{id}/{hash}', function (Request $request) {
     // Find the user by ID from the URL
     $user = \App\Models\User::findOrFail($request->route('id'));
@@ -104,3 +100,4 @@ Route::get('verify-email/{id}/{hash}', function (Request $request) {
     return redirect()->route('login')->with('status', 'Your email has been verified! Please sign in to continue.');
 })->middleware(['signed', 'throttle:6,1'])
     ->name('verification.verify');
+*/

@@ -11,11 +11,14 @@ class EmailVerificationPromptController extends Controller
 {
     /**
      * Display the email verification prompt.
+     * [COMMENTED OUT - EMAIL VERIFICATION DISABLED] - Email verification not needed for LAN-only system
      */
     public function __invoke(Request $request): RedirectResponse|View
     {
-        return $request->user()->hasVerifiedEmail()
-                    ? redirect()->intended(route('dashboard', absolute: false))
-                    : view('auth.verify-email');
+        // Email verification is disabled, redirect all users to dashboard
+        return redirect()->intended(route('dashboard', absolute: false));
+        // return $request->user()->hasVerifiedEmail()
+        //             ? redirect()->intended(route('dashboard', absolute: false))
+        //             : view('auth.verify-email');
     }
 }

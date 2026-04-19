@@ -43,9 +43,12 @@ class EmailChangeController extends Controller
             'expires_at' => Carbon::now()->addMinutes(60),
         ]);
 
+        // [COMMENTED OUT - EMAIL FUNCTION DISABLED] - Email verification disabled for LAN-only system
         // Send verification email directly to the NEW email address
+        /*
         Notification::route('mail', $request->email)
             ->notify(new EmailChangeVerificationNotification($token, $request->email, $request->user()->name));
+        */
 
         return back()->with('status', 'verification-link-sent');
     }

@@ -15,6 +15,7 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $fillable = [
         'name',
         'email',
+        'username',
         'password',
         'profile_picture',
         'unit_id',
@@ -35,10 +36,13 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * Determine if the user has verified their email address.
      * Admins bypass email verification.
+     * [COMMENTED OUT - EMAIL VERIFICATION DISABLED] - Email verification disabled for LAN-only system
      */
     public function hasVerifiedEmail(): bool
     {
-        return $this->isAdmin() || !is_null($this->email_verified_at);
+        // return $this->isAdmin() || !is_null($this->email_verified_at);
+        // Always return true since email verification is not used in LAN-only system
+        return true;
     }
 
     /**
@@ -83,9 +87,12 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Send the password reset notification using the custom email template.
+     * [COMMENTED OUT - EMAIL FUNCTION DISABLED] - Email notifications disabled for LAN-only system
      */
+    /*
     public function sendPasswordResetNotification($token): void
     {
         $this->notify(new ResetPasswordNotification($token));
     }
+    */
 }

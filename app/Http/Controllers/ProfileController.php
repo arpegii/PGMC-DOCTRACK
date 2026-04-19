@@ -41,8 +41,9 @@ class ProfileController extends Controller
             $user->profile_picture = $path;
         }
 
-        // Only update name (email is handled separately through email change verification)
+        // Update name and username
         $user->name = $request->name;
+        $user->username = $request->username;
         
         $user->save();
 

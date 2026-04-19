@@ -1,66 +1,5 @@
 <section>
-    <form id="send-verification" method="post" action="{{ route('verification.send') }}">
-        @csrf
-    </form>
-
-    <form method="post" action="{{ route('profile.update') }}" class="mt-6" enctype="multipart/form-data" x-data="{
-        email: '{{ old('email', $user->email) }}',
-        originalEmail: '{{ $user->email }}',
-        isValidEmail: true,
-        emailChanged: false,
-        
-        validateEmail() {
-            // Strict email validation - only accept specific common TLDs
-            const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.(com|org|net|edu|gov|io|ai|app|dev|tech|info|ph|uk|us|ca|au|de|fr|it|es|nl|jp|cn|in|br|ru|kr|mx|id|tr|za|se|no|dk|fi|pl|be|at|ch|cz|gr|pt|nz|sg|hk|my|th|vn|pk|bd|ng|eg|sa|ae|il|cl|pe|ar|ve|ua|ro|hu|ie|sk|biz|me|tv|asia|mil|int)$/i;
-            this.isValidEmail = emailRegex.test(this.email);
-            this.emailChanged = this.email !== this.originalEmail;
-        },
-        
-        handleFormSubmit(event) {
-            // Strict email validation - only accept specific common TLDs
-            const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.(com|org|net|edu|gov|io|ai|app|dev|tech|info|ph|uk|us|ca|au|de|fr|it|es|nl|jp|cn|in|br|ru|kr|mx|id|tr|za|se|no|dk|fi|pl|be|at|ch|cz|gr|pt|nz|sg|hk|my|th|vn|pk|bd|ng|eg|sa|ae|il|cl|pe|ar|ve|ua|ro|hu|ie|sk|biz|me|tv|asia|mil|int)$/i;
-            if (!emailRegex.test(this.email)) {
-                event.preventDefault();
-                console.log('Email validation failed:', this.email);
-                document.getElementById('invalid-email-modal').classList.add('show');
-                return false;
-            }
-            console.log('Email validation passed, allowing form submission');
-            // Allow form to submit normally if email is valid
-        },
-        
-        handleEmailVerification() {
-            // Strict email validation - only accept specific common TLDs
-            const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.(com|org|net|edu|gov|io|ai|app|dev|tech|info|ph|uk|us|ca|au|de|fr|it|es|nl|jp|cn|in|br|ru|kr|mx|id|tr|za|se|no|dk|fi|pl|be|at|ch|cz|gr|pt|nz|sg|hk|my|th|vn|pk|bd|ng|eg|sa|ae|il|cl|pe|ar|ve|ua|ro|hu|ie|sk|biz|me|tv|asia|mil|int)$/i;
-            if (!emailRegex.test(this.email)) {
-                console.log('Email validation failed:', this.email);
-                document.getElementById('invalid-email-modal').classList.add('show');
-                return;
-            }
-            
-            console.log('Email validation passed, submitting form');
-            
-            // If email is valid, create and submit the form
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '{{ route("email-change.send-verification") }}';
-            
-            const csrfToken = document.createElement('input');
-            csrfToken.type = 'hidden';
-            csrfToken.name = '_token';
-            csrfToken.value = '{{ csrf_token() }}';
-            
-            const emailField = document.createElement('input');
-            emailField.type = 'hidden';
-            emailField.name = 'email';
-            emailField.value = this.email;
-            
-            form.appendChild(csrfToken);
-            form.appendChild(emailField);
-            document.body.appendChild(form);
-            form.submit();
-        }
-    }" @submit="handleFormSubmit($event)">
+    <form method="post" action="{{ route('profile.update') }}" class="mt-6" enctype="multipart/form-data">
         @csrf
         @method('patch')
 
@@ -73,7 +12,7 @@
                     </h2>
 
                     <p class="mt-1 text-sm text-slate-600">
-                        {{ __("Update your account's profile information and email address.") }}
+                        {{ __("Update your account's profile information and username.") }}
                     </p>
                 </header>
 
@@ -93,65 +32,27 @@
                     </div>
 
                     <div>
-                        <x-input-label for="email" :value="__('Email')" />
+                        <x-input-label for="username" :value="__('Username')" />
                         <x-text-input 
-                            id="email" 
-                            name="email" 
-                            type="email" 
+                            id="username" 
+                            name="username" 
+                            type="text" 
                             class="mt-1 block w-full" 
-                            :value="old('email', $user->email)"
-                            x-model="email"
-                            @input="validateEmail()"
+                            :value="old('username', $user->username)"
                             required 
-                            autocomplete="username" 
+                            autocomplete="username"
+                            placeholder="Enter your username (lowercase letters, numbers, and underscores only)"
                         />
-                        <p x-show="!isValidEmail && email.length > 0" class="mt-1 text-xs text-red-600">
-                            Please enter a valid email address.
+                        <p class="mt-1 text-xs text-slate-500">
+                            Username can only contain lowercase letters, numbers, and underscores.
                         </p>
-                        <p x-show="emailChanged && isValidEmail" class="mt-1 text-xs text-amber-600">
-                            You will need to verify your new email address.
-                        </p>
-                        <x-input-error class="mt-2" :messages="$errors->get('email')" />
+                        <x-input-error class="mt-2" :messages="$errors->get('username')" />
 
-                        @if (session('status') === 'verification-link-sent')
+                        @if (session('status') === 'profile-updated')
                             <div class="mt-2">
                                 <p class="text-sm font-medium text-green-600">
-                                    {{ __('A verification link has been sent to your new email address. Please check your inbox.') }}
+                                    {{ __('Your profile has been updated successfully!') }}
                                 </p>
-                            </div>
-                        @endif
-
-                        @if (session('status') === 'email-updated')
-                            <div class="mt-2">
-                                <p class="text-sm font-medium text-green-600">
-                                    {{ __('Your email address has been successfully updated!') }}
-                                </p>
-                            </div>
-                        @endif
-
-                        @if (session('error'))
-                            <div class="mt-2">
-                                <p class="text-sm font-medium text-red-600">
-                                    {{ session('error') }}
-                                </p>
-                            </div>
-                        @endif
-
-                        @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
-                            <div>
-                                <p class="text-sm mt-2 text-slate-800">
-                                    {{ __('Your email address is unverified.') }}
-
-                                    <button form="send-verification" class="underline text-sm text-slate-600 hover:text-slate-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                        {{ __('Click here to re-send the verification email.') }}
-                                    </button>
-                                </p>
-
-                                @if (session('status') === 'verification-link-sent')
-                                    <p class="mt-2 font-medium text-sm text-green-600">
-                                        {{ __('A new verification link has been sent to your email address.') }}
-                                    </p>
-                                @endif
                             </div>
                         @endif
                     </div>
@@ -193,25 +94,26 @@
             </div>
         </div>
 
-        <div class="mt-6 flex flex-wrap items-center gap-3">
-            <!-- Show different button based on whether email changed -->
-            <template x-if="!emailChanged">
-                <x-primary-button type="submit" x-bind:disabled="!isValidEmail">{{ __('Save') }}</x-primary-button>
-            </template>
-            
-            <template x-if="emailChanged">
-                <button 
-                    type="button"
-                    @click="handleEmailVerification()"
-                    x-bind:disabled="!isValidEmail"
-                    class="inline-flex items-center px-4 py-2 bg-amber-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-amber-700 focus:bg-amber-700 active:bg-amber-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {{ __('Send Verification Email') }}
-                </button>
-            </template>
+        <div class="mt-6 flex items-center gap-4">
+            <x-primary-button>{{ __('Save') }}</x-primary-button>
         </div>
     </form>
 </section>
+
+<script>
+    function previewImage(event) {
+        const file = event.target.files[0];
+        const preview = document.getElementById('profile-preview');
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                preview.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+</script>
 
 <!-- Profile Update Success Modal -->
 <div id="success-modal" class="modal-overlay">

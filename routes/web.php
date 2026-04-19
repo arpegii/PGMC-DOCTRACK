@@ -27,14 +27,18 @@ Route::get('/', function () {
 // Dashboard redirect to incoming
 Route::get('/dashboard', function () {
     return redirect()->route('incoming.index');
-})->middleware(['auth', 'verified'])->name('dashboard');
+    // [COMMENTED OUT - EMAIL VERIFICATION DISABLED] - Email verification not needed for LAN-only system
+    // })->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware(['auth'])->name('dashboard');
 
 // Public route for email change verification (doesn't require auth since user might be logged out)
 Route::get('/email-change/verify', [EmailChangeController::class, 'verify'])
     ->name('email-change.verify');
 
 // Authenticated pages
-Route::middleware(['auth', 'verified'])->group(function () {
+// [COMMENTED OUT - EMAIL VERIFICATION DISABLED] - Email verification not needed for LAN-only system
+// Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------

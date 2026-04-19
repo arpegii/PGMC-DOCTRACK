@@ -23,15 +23,19 @@ class DocumentReceivedNotification extends Notification implements ShouldQueue
 
     /**
      * Get the notification's delivery channels.
+     * [COMMENTED OUT - EMAIL FUNCTION DISABLED] - Disabled 'mail' channel for LAN-only system
      */
     public function via($notifiable)
     {
-        return ['mail', 'database'];
+        // return ['mail', 'database'];
+        return ['database'];
     }
 
     /**
      * Get the mail representation of the notification.
+     * [COMMENTED OUT - EMAIL FUNCTION DISABLED] - Email notifications disabled for LAN-only system
      */
+    /*
     public function toMail($notifiable)
     {
         return (new MailMessage)
@@ -42,6 +46,7 @@ class DocumentReceivedNotification extends Notification implements ShouldQueue
                 'receivedBy' => $this->receivedBy
             ]);
     }
+    */
 
     /**
      * Get the array representation for database storage.

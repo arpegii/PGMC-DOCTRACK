@@ -258,12 +258,11 @@ class RejectedController extends Controller
         }
 
         // ── Notify receiver unit users ────────────────────────────
+        // Database notifications for resubmitted documents
         try {
             $document->load(['senderUnit', 'receivingUnit', 'creator']);
 
-            $receivingUnitUsers = User::where('unit_id', $document->receiving_unit_id)
-                ->whereNotNull('email')
-                ->get();
+            $receivingUnitUsers = User::where('unit_id', $document->receiving_unit_id)->get();
 
             foreach ($receivingUnitUsers as $receivingUser) {
                 try {

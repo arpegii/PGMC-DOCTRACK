@@ -363,7 +363,38 @@
                             @enderror
                         </div>
 
+                        <!-- Username -->
+                        <div class="form-group form-group-full">
+                            <label for="username" class="form-label">
+                                Username <span class="required">*</span>
+                            </label>
+                            <input
+                                id="username"
+                                type="text"
+                                name="username"
+                                value="{{ old('username') }}"
+                                required
+                                autocomplete="username"
+                                class="input-field"
+                                placeholder="johndoe"
+                            >
+                            <small style="font-size: 0.75rem; color: var(--color-text-muted); display: block; margin-top: 0.375rem;">
+                                Lowercase letters, numbers, and underscores only
+                            </small>
+                            @error('username')
+                                <div class="error-message">
+                                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="7" cy="7" r="6"></circle>
+                                        <line x1="7" y1="4" x2="7" y2="7"></line>
+                                        <line x1="7" y1="10" x2="7.01" y2="10"></line>
+                                    </svg>
+                                    <span>{{ $message }}</span>
+                                </div>
+                            @enderror
+                        </div>
+
                         <!-- Email -->
+                        {{-- COMMENTED OUT - TO BE USED LATER
                         <div class="form-group form-group-full">
                             <label for="email" class="form-label">
                                 Email address <span class="required">*</span>
@@ -389,6 +420,7 @@
                                 </div>
                             @enderror
                         </div>
+                        --}}
 
                         <!-- Unit -->
                         <div class="form-group form-group-full">

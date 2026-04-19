@@ -24,7 +24,9 @@ class DocumentResubmittedNotification extends Notification implements ShouldQueu
 
     public function via(object $notifiable): array
     {
-        return ['database', 'mail'];
+        // [COMMENTED OUT - EMAIL FUNCTION DISABLED] - Disabled 'mail' channel for LAN-only system
+        // return ['database', 'mail'];
+        return ['database'];
     }
 
     /**
@@ -65,23 +67,28 @@ class DocumentResubmittedNotification extends Notification implements ShouldQueu
         ];
     }
 
-public function toMail(object $notifiable): MailMessage
-{
-    $attempt = $this->document->resubmit_count ?? 1;
-    $suffix  = match ($attempt) {
-        1       => '1st',
-        2       => '2nd',
-        3       => '3rd',
-        default => $attempt . 'th',
-    };
+    /**
+     * [COMMENTED OUT - EMAIL FUNCTION DISABLED] - Email notifications disabled for LAN-only system
+     */
+    /*
+    public function toMail(object $notifiable): MailMessage
+    {
+        $attempt = $this->document->resubmit_count ?? 1;
+        $suffix  = match ($attempt) {
+            1       => '1st',
+            2       => '2nd',
+            3       => '3rd',
+            default => $attempt . 'th',
+        };
 
-    return (new MailMessage)
-        ->subject('Document Resubmitted: ' . $this->document->document_number)
-        ->view('emails.document-resubmitted', [
-            'notifiable'    => $notifiable,
-            'document'      => $this->document,
-            'resubmittedBy' => $this->resubmittedBy,
-            'suffix'        => $suffix,
-        ]);
-}
+        return (new MailMessage)
+            ->subject('Document Resubmitted: ' . $this->document->document_number)
+            ->view('emails.document-resubmitted', [
+                'notifiable'    => $notifiable,
+                'document'      => $this->document,
+                'resubmittedBy' => $this->resubmittedBy,
+                'suffix'        => $suffix,
+            ]);
+    }
+    */
 }   

@@ -169,10 +169,8 @@ class DocumentController extends Controller
         // Load relationships before sending notifications to avoid N+1 queries
         $document->load(['senderUnit', 'receivingUnit', 'creator']);
 
-        // Send notification to all users in the receiving unit
-        $receivingUnitUsers = User::where('unit_id', $request->receiving_unit_id)
-            ->whereNotNull('email')
-            ->get();
+        // Send notification to all users in the receiving unit - Database notification
+        $receivingUnitUsers = User::where('unit_id', $request->receiving_unit_id)->get();
 
         if ($receivingUnitUsers->count() > 0) {
             foreach ($receivingUnitUsers as $receivingUser) {
@@ -217,8 +215,8 @@ class DocumentController extends Controller
 
             DB::commit();
 
-            // Notify ONLY the original sender (creator of the document)
-            if ($document->creator?->email) {
+            // Notify the original sender (creator of the document) - Database notification
+            if ($document->creator) {
                 try {
                     $document->creator->notify(new DocumentReceivedNotification($document, $user));
                 } catch (\Throwable $e) {
@@ -287,8 +285,8 @@ class DocumentController extends Controller
 
             DB::commit();
 
-            // Notify ONLY the original sender (creator of the document)
-            if ($document->creator?->email) {
+            // Notify the original sender (creator of the document) - Database notification
+            if ($document->creator) {
                 try {
                     $document->creator->notify(new DocumentRejectedNotification($document, $user));
                 } catch (\Throwable $e) {
@@ -364,10 +362,8 @@ class DocumentController extends Controller
 
             DB::commit();
 
-            // Notify all users in the receiving unit (destination) after commit
-            $receivingUnitUsers = User::where('unit_id', $request->forward_to_unit_id)
-                ->whereNotNull('email')
-                ->get();
+            // Notify all users in the receiving unit (destination) - Database notification
+            $receivingUnitUsers = User::where('unit_id', $request->forward_to_unit_id)->get();
 
             foreach ($receivingUnitUsers as $receivingUser) {
                 try {

@@ -1,6 +1,6 @@
-import './bootstrap';
+import "./bootstrap";
 
-import Alpine from 'alpinejs';
+import Alpine from "alpinejs";
 
 window.Alpine = Alpine;
 
@@ -14,7 +14,7 @@ const buildUrlWithFormParams = (form) => {
 
     for (const [key, value] of new FormData(form).entries()) {
         const normalized = String(value).trim();
-        if (normalized !== '') {
+        if (normalized !== "") {
             params.set(key, normalized);
         }
     }
@@ -25,9 +25,9 @@ const buildUrlWithFormParams = (form) => {
 
 const replaceTableShell = (htmlText) => {
     const parser = new DOMParser();
-    const nextDoc = parser.parseFromString(htmlText, 'text/html');
-    const nextShell = nextDoc.querySelector('.table-shell');
-    const currentShell = document.querySelector('.table-shell');
+    const nextDoc = parser.parseFromString(htmlText, "text/html");
+    const nextShell = nextDoc.querySelector(".table-shell");
+    const currentShell = document.querySelector(".table-shell");
 
     if (!nextShell || !currentShell) {
         return false;
@@ -56,9 +56,9 @@ const initLiveSearchForm = (form) => {
         activeRequest = new AbortController();
 
         fetch(targetUrl.toString(), {
-            method: 'GET',
+            method: "GET",
             headers: {
-                'X-Requested-With': 'XMLHttpRequest',
+                "X-Requested-With": "XMLHttpRequest",
             },
             signal: activeRequest.signal,
         })
@@ -69,42 +69,46 @@ const initLiveSearchForm = (form) => {
                     return;
                 }
 
-                const qs = targetUrl.search ? targetUrl.search : '';
-                window.history.replaceState({}, '', `${targetUrl.pathname}${qs}`);
+                const qs = targetUrl.search ? targetUrl.search : "";
+                window.history.replaceState(
+                    {},
+                    "",
+                    `${targetUrl.pathname}${qs}`,
+                );
             })
             .catch((error) => {
-                if (error.name !== 'AbortError') {
+                if (error.name !== "AbortError") {
                     // Fallback path is full page submission.
                     form.submit();
                 }
             });
     };
 
-    form.addEventListener('submit', (event) => {
+    form.addEventListener("submit", (event) => {
         event.preventDefault();
         runSearch();
     });
 
-    searchInput.addEventListener('input', () => {
+    searchInput.addEventListener("input", () => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(runSearch, LIVE_SEARCH_DELAY_MS);
     });
 };
 
 const initFilterUnitPicker = (wrapper) => {
-    const trigger = wrapper.querySelector('[data-filter-unit-trigger]');
-    const menu = wrapper.querySelector('[data-filter-unit-menu]');
-    const label = wrapper.querySelector('[data-filter-unit-label]');
-    const input = wrapper.querySelector('[data-filter-unit-input]');
-    const options = wrapper.querySelectorAll('[data-filter-unit-option]');
-    const form = wrapper.closest('form');
+    const trigger = wrapper.querySelector("[data-filter-unit-trigger]");
+    const menu = wrapper.querySelector("[data-filter-unit-menu]");
+    const label = wrapper.querySelector("[data-filter-unit-label]");
+    const input = wrapper.querySelector("[data-filter-unit-input]");
+    const options = wrapper.querySelectorAll("[data-filter-unit-option]");
+    const form = wrapper.closest("form");
 
     if (!trigger || !menu || !label || !input || !form) {
         return;
     }
 
     const flyouts = {};
-    document.querySelectorAll('[data-filter-flyout]').forEach((flyout) => {
+    document.querySelectorAll("[data-filter-flyout]").forEach((flyout) => {
         const key = flyout.dataset.filterFlyout;
         if (!key) {
             return;
@@ -117,32 +121,34 @@ const initFilterUnitPicker = (wrapper) => {
 
     const setLabel = (value, text) => {
         label.textContent = text;
-        label.style.color = value ? '#111827' : '#6b7280';
+        label.style.color = value ? "#111827" : "#6b7280";
     };
 
     const submitForm = () => {
-        if (typeof form.requestSubmit === 'function') {
+        if (typeof form.requestSubmit === "function") {
             form.requestSubmit();
         } else {
-            form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+            form.dispatchEvent(
+                new Event("submit", { bubbles: true, cancelable: true }),
+            );
         }
     };
 
     const closeMenu = () => {
-        menu.classList.add('is-hidden');
-        trigger.setAttribute('aria-expanded', 'false');
+        menu.classList.add("is-hidden");
+        trigger.setAttribute("aria-expanded", "false");
         Object.values(flyouts).forEach((flyout) => {
-            flyout.style.display = 'none';
+            flyout.style.display = "none";
         });
     };
 
     const openMenu = () => {
-        menu.classList.remove('is-hidden');
-        trigger.setAttribute('aria-expanded', 'true');
+        menu.classList.remove("is-hidden");
+        trigger.setAttribute("aria-expanded", "true");
     };
 
     const toggleMenu = () => {
-        if (menu.classList.contains('is-hidden')) {
+        if (menu.classList.contains("is-hidden")) {
             openMenu();
             return;
         }
@@ -157,13 +163,13 @@ const initFilterUnitPicker = (wrapper) => {
         const rect = anchor.getBoundingClientRect();
         flyout.style.top = `${rect.top}px`;
         flyout.style.left = `${rect.right + 6}px`;
-        flyout.style.display = 'block';
+        flyout.style.display = "block";
     };
 
     const hideFlyout = (key) => {
         const flyout = flyouts[key];
         if (flyout) {
-            flyout.style.display = 'none';
+            flyout.style.display = "none";
         }
     };
 
@@ -173,7 +179,7 @@ const initFilterUnitPicker = (wrapper) => {
 
     let flyoutTimers = {};
 
-    trigger.addEventListener('click', (event) => {
+    trigger.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
         toggleMenu();
@@ -182,10 +188,10 @@ const initFilterUnitPicker = (wrapper) => {
     options.forEach((option) => {
         const flyoutKey = option.dataset.hasFlyout;
 
-        option.addEventListener('mouseenter', () => {
-            option.style.background = '#f3f4f6';
+        option.addEventListener("mouseenter", () => {
+            option.style.background = "#f3f4f6";
             if (flyoutKey) {
-                const otherKey = flyoutKey === 'pau' ? 'bgcu' : 'pau';
+                const otherKey = flyoutKey === "pau" ? "bgcu" : "pau";
                 hideFlyout(otherKey);
                 clearTimeout(flyoutTimers[flyoutKey]);
                 showFlyout(flyoutKey, option);
@@ -194,17 +200,21 @@ const initFilterUnitPicker = (wrapper) => {
             }
         });
 
-        option.addEventListener('mouseleave', () => {
-            option.style.background = '';
+        option.addEventListener("mouseleave", () => {
+            option.style.background = "";
             if (flyoutKey) {
-                flyoutTimers[flyoutKey] = setTimeout(() => hideFlyout(flyoutKey), 120);
+                flyoutTimers[flyoutKey] = setTimeout(
+                    () => hideFlyout(flyoutKey),
+                    120,
+                );
             }
         });
 
-        option.addEventListener('click', (event) => {
+        option.addEventListener("click", (event) => {
             event.preventDefault();
-            const nextValue = option.dataset.unitId ?? '';
-            const nextLabel = option.dataset.unitName ?? option.textContent.trim();
+            const nextValue = option.dataset.unitId ?? "";
+            const nextLabel =
+                option.dataset.unitName ?? option.textContent.trim();
 
             input.value = nextValue;
             setLabel(nextValue, nextLabel);
@@ -214,16 +224,17 @@ const initFilterUnitPicker = (wrapper) => {
     });
 
     Object.values(flyouts).forEach((flyout) => {
-        flyout.querySelectorAll('[data-filter-flyout-item]').forEach((item) => {
-            item.addEventListener('mouseenter', () => {
-                item.style.background = '#eff6ff';
+        flyout.querySelectorAll("[data-filter-flyout-item]").forEach((item) => {
+            item.addEventListener("mouseenter", () => {
+                item.style.background = "#eff6ff";
             });
-            item.addEventListener('mouseleave', () => {
-                item.style.background = '';
+            item.addEventListener("mouseleave", () => {
+                item.style.background = "";
             });
-            item.addEventListener('click', () => {
-                const nextValue = item.dataset.unitId ?? '';
-                const nextLabel = item.dataset.unitName ?? item.textContent.trim();
+            item.addEventListener("click", () => {
+                const nextValue = item.dataset.unitId ?? "";
+                const nextLabel =
+                    item.dataset.unitName ?? item.textContent.trim();
 
                 input.value = nextValue;
                 setLabel(nextValue, nextLabel);
@@ -234,24 +245,35 @@ const initFilterUnitPicker = (wrapper) => {
     });
 
     Object.entries(flyouts).forEach(([key, flyout]) => {
-        flyout.addEventListener('mouseenter', () => clearTimeout(flyoutTimers[key]));
-        flyout.addEventListener('mouseleave', () => hideFlyout(key));
+        flyout.addEventListener("mouseenter", () =>
+            clearTimeout(flyoutTimers[key]),
+        );
+        flyout.addEventListener("mouseleave", () => hideFlyout(key));
     });
 
-    document.addEventListener('click', (event) => {
-        if (!wrapper.contains(event.target) && !Object.values(flyouts).some((flyout) => flyout.contains(event.target))) {
+    document.addEventListener("click", (event) => {
+        if (
+            !wrapper.contains(event.target) &&
+            !Object.values(flyouts).some((flyout) =>
+                flyout.contains(event.target),
+            )
+        ) {
             closeMenu();
         }
     });
 
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
             closeMenu();
         }
     });
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('form[data-live-search-form]').forEach(initLiveSearchForm);
-    document.querySelectorAll('[data-filter-unit-picker]').forEach(initFilterUnitPicker);
+document.addEventListener("DOMContentLoaded", () => {
+    document
+        .querySelectorAll("form[data-live-search-form]")
+        .forEach(initLiveSearchForm);
+    document
+        .querySelectorAll("[data-filter-unit-picker]")
+        .forEach(initFilterUnitPicker);
 });

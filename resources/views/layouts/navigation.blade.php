@@ -100,8 +100,7 @@
                         x-transition:leave="transition ease-in duration-75"
                         x-transition:leave-start="transform opacity-100 scale-100"
                         x-transition:leave-end="transform opacity-0 scale-95"
-                        class="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden"
-                        style="display: none;">
+                        class="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden">
                         
                         <!-- Header -->
                         <div class="px-5 py-4 bg-white border-b border-slate-100">
@@ -324,11 +323,6 @@
             <x-responsive-nav-link :href="route('notifications.index')" :active="request()->routeIs('notifications.*')">
                 <div class="flex items-center justify-between">
                     <span>Notifications</span>
-                    @if($visibleUnreadNotifications->count() > 0)
-                        <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
-                            {{ $visibleUnreadNotifications->count() }}
-                        </span>
-                    @endif
                 </div>
             </x-responsive-nav-link>
         </div>

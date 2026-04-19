@@ -370,23 +370,23 @@
                 <form method="POST" action="{{ route('login') }}">
                     @csrf
 
-                    <!-- Email -->
+                    <!-- Username -->
                     <div class="form-group">
-                        <label for="email" class="form-label">Email address</label>
+                        <label for="username" class="form-label">Username</label>
                         <div class="input-wrapper">
                             <input 
-                                id="email" 
-                                type="email" 
-                                name="email" 
-                                value="{{ old('email') }}" 
+                                id="username" 
+                                type="text" 
+                                name="username" 
+                                value="{{ old('username') }}" 
                                 required 
                                 autofocus
-                                autocomplete="email"
+                                autocomplete="username"
                                 class="input-field"
-                                placeholder="name@company.com"
+                                placeholder="Enter your username"
                             >
                         </div>
-                        @error('email')
+                        @error('username')
                             <div class="error-message">
                                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="7" cy="7" r="6"></circle>

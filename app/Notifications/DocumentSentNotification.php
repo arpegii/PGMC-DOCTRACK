@@ -21,15 +21,19 @@ class DocumentSentNotification extends Notification implements ShouldQueue
 
     /**
      * Get the notification's delivery channels.
+     * [COMMENTED OUT - EMAIL FUNCTION DISABLED] - Disabled 'mail' channel for LAN-only system
      */
     public function via($notifiable): array
     {
-        return ['mail', 'database'];
+        // return ['mail', 'database'];
+        return ['database'];
     }
 
     /**
      * Get the mail representation of the notification.
+     * [COMMENTED OUT - EMAIL FUNCTION DISABLED] - Email notifications disabled for LAN-only system
      */
+    /*
     public function toMail($notifiable): MailMessage
     {
         return (new MailMessage)
@@ -39,6 +43,7 @@ class DocumentSentNotification extends Notification implements ShouldQueue
                 'user' => $notifiable
             ]);
     }
+    */
 
     /**
      * Get the array representation for database storage.

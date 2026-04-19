@@ -37,7 +37,8 @@ class RegisteredUserController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'username' => ['required', 'string', 'lowercase', 'max:255', 'unique:'.User::class, 'regex:/^[a-z0-9_]+$/'],
+            'email' => ['nullable', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'unit_id' => [
                 'required', 
@@ -49,23 +50,29 @@ class RegisteredUserController extends Controller
                     }
                 },
             ],
+        ], [
+            'username.required' => 'Username is required.',
+            'username.unique' => 'This username is already taken.',
+            'username.regex' => 'Username can only contain lowercase letters, numbers, and underscores.',
         ]);
+
+        // Generate email if not provided (using username + placeholder domain)
+        $email = $request->email ?? $request->username . '@local.pgmc.gov';
 
         $user = User::create([
             'name' => $request->name,
-            'email' => $request->email,
+            'username' => $request->username,
+            'email' => $email,
             'password' => Hash::make($request->password),
             'unit_id' => $request->unit_id,
             'is_admin' => false, // Always set to false for registration
         ]);
 
+        // [COMMENTED OUT - EMAIL FUNCTION DISABLED] - Email verification disabled for LAN-only system
         // Fire the Registered event - this sends the verification email
-        event(new Registered($user));
+        // event(new Registered($user));
 
-        // DO NOT log the user in - they need to verify email first
-        // Auth::login($user); // <-- REMOVED THIS LINE
-
-        // Redirect to login page with message to check email
-        return redirect()->route('login')->with('status', 'Registration successful! Please check your email to verify your account before signing in.');
+        // Redirect to login page with success message
+        return redirect()->route('login')->with('status', 'Account created successfully! Login using your created account.');
     }
 }
